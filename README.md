@@ -4,12 +4,12 @@ P2P - Chat Encrypt pear to pear
 
 ## Shift Cipher Demo
 
-This repository now includes a simple PHP page (`index.php`) that can encode or decode text using a custom shift cipher. All vowels rotate to the next vowel and consonants advance to the next consonant.
+This repository now includes a browser-based page (`index.php`) for encoding or decoding text with a custom shift cipher. The interface features a dark theme with live transform, encrypt/decrypt buttons, swap/copy/clear controls and keyboard shortcuts.
 
-To run locally:
+### Run locally
 
 ```
 php -S localhost:8000
 ```
 
-Then visit `http://localhost:8000/index.php` in your browser to try the cipher.
+Visit `http://localhost:8000/index.php` in your browser to try the cipher.
