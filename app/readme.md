@@ -21,6 +21,10 @@ Lightweight PHP/MySQL backend and web UI for managing purchase orders. Excel `.x
 - `index.php`, `suppliers.php`, `purchase_orders.php`, `po_view.php` for lightweight management/reporting.
 - Add helpers such as `config.php`, `db.php`, shared utilities here as needed (avoid breaking Excel/VBA contracts).
 
+## Admin login table setup
+- Run `admin_users.sql` in the `filiades_eems` database (phpMyAdmin or `mysql` CLI) to create the `admin_users` table.
+- Seed an account from the command line with `php create_admin_user.php <username> <plain_text_password>` (uses bcrypt via `password_hash`).
+
 ## Excel/VBA Context
 - Excel sends fixed cell ranges via JSON.
 - Helper functions: `NzText`, `NzNum`, `JsonEscape` (cleans tabs/line breaks/illegal chars).
