@@ -26,6 +26,8 @@ $description = trim((string) ($_POST['description'] ?? ''));
 $description2 = trim((string) ($_POST['description_2'] ?? ''));
 $isVisibleRaw = $_POST['is_visible'] ?? '0';
 $isVisible = $isVisibleRaw === '1' ? 1 : 0;
+$qtyRaw = $_POST['qty'] ?? '';
+$qty = $qtyRaw === '' ? null : filter_var($qtyRaw, FILTER_VALIDATE_FLOAT);
 
 if (!$orderBookId) {
     respond(400, [
@@ -38,6 +40,20 @@ if ($description === '') {
     respond(400, [
         'success' => false,
         'message' => 'Description cannot be empty.',
+    ]);
+}
+
+if ($qty === false) {
+    respond(400, [
+        'success' => false,
+        'message' => 'Quantity must be a valid number.',
+    ]);
+}
+
+if (!is_null($qty) && $qty < 0) {
+    respond(400, [
+        'success' => false,
+        'message' => 'Quantity cannot be negative.',
     ]);
 }
 
@@ -59,6 +75,7 @@ try {
         'UPDATE order_books
          SET description = :description,
              description_2 = :description2,
+             qty = :qty,
              is_visible = :is_visible,
              updated_at = NOW()
          WHERE id = :id'
@@ -67,6 +84,7 @@ try {
     $updateStmt->execute([
         ':description' => $description,
         ':description2' => $description2,
+        ':qty' => $qty,
         ':is_visible' => $isVisible,
         ':id' => $orderBookId,
     ]);
