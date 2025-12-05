@@ -51,11 +51,18 @@ require_authentication();
                 });
             }
 
-            async function loadView(view) {
+            async function loadView(view, params = new URLSearchParams()) {
                 setActiveLink(view);
 
+                // Carry through any query parameters so deep links can open with filters already applied.
+                const mergedParams = new URLSearchParams(params);
+                mergedParams.set('view', view);
+
+                const queryString = mergedParams.toString();
+                const fetchUrl = queryString ? `content.php?${queryString}` : 'content.php';
+
                 try {
-                    const response = await fetch(`content.php?view=${encodeURIComponent(view)}`, {
+                    const response = await fetch(fetchUrl, {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     });
 
@@ -81,6 +88,10 @@ require_authentication();
 
                         oldScript.replaceWith(newScript);
                     });
+
+                    // Keep the URL in sync so bookmarking a view reloads it with the same filters.
+                    const newUrl = queryString ? `?${queryString}` : window.location.pathname;
+                    window.history.replaceState(null, '', newUrl);
                 } catch (err) {
                     contentArea.innerHTML = '<div class="alert alert-danger" role="alert">There was a problem loading this section. Please try again.</div>';
                 }
@@ -116,8 +127,11 @@ require_authentication();
                 }
             });
 
-            // Load default view on first paint to sync active state.
-            setActiveLink('dashboard');
+            // Load initial view from the URL so deep links can open directly to filtered pages.
+            const initialParams = new URLSearchParams(window.location.search);
+            const initialView = initialParams.get('view') || 'dashboard';
+
+            loadView(initialView, initialParams);
         })();
     </script>
 </body>

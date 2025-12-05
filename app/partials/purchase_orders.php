@@ -7,6 +7,22 @@ function e(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+// Build a query string while skipping empty values so we keep URLs tidy.
+function build_query(array $params): string
+{
+    $filtered = [];
+
+    foreach ($params as $key => $value) {
+        if ($value === null || $value === '') {
+            continue;
+        }
+
+        $filtered[$key] = $value;
+    }
+
+    return http_build_query($filtered);
+}
+
 $pdo = get_db_connection();
 
 $showHiddenBooks = ($_GET['show_hidden'] ?? '0') === '1';
@@ -279,12 +295,13 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                 Uploaded
                             </button>
                         </th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($orders)) : ?>
                         <tr>
-                            <td colspan="5" class="text-secondary">No purchase orders were found for the current selection.</td>
+                            <td colspan="6" class="text-secondary">No purchase orders were found for the current selection.</td>
                         </tr>
                     <?php else : ?>
                         <?php foreach ($orders as $order) : ?>
@@ -300,6 +317,28 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                 <td><?php echo e($order['order_date']); ?></td>
                                 <td class="text-end"><?php echo number_format((float) $order['total_amount'], 2); ?></td>
                                 <td><?php echo e($order['created_at']); ?></td>
+                                <td class="text-end">
+                                    <?php
+                                    $viewParams = [
+                                        'po_number' => $order['po_number'],
+                                        'order_book' => $selectedBook,
+                                        'supplier' => $supplierFilter,
+                                        'page' => $currentPage,
+                                    ];
+
+                                    if ($showHiddenBooks) {
+                                        $viewParams['show_hidden'] = '1';
+                                    }
+
+                                    $viewQuery = build_query($viewParams);
+                                    ?>
+                                    <a
+                                        class="btn btn-outline-primary btn-sm"
+                                        href="po_view.php<?php echo $viewQuery !== '' ? '?' . e($viewQuery) : ''; ?>"
+                                    >
+                                        View
+                                    </a>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -504,7 +543,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
 
         if (rows.length === 0) {
             const emptyRow = document.createElement('tr');
-            emptyRow.innerHTML = '<td colspan="5" class="text-secondary">No purchase orders match the current filters.</td>';
+            emptyRow.innerHTML = '<td colspan="6" class="text-secondary">No purchase orders match the current filters.</td>';
             tableBody.appendChild(emptyRow);
             return;
         }
