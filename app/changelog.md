@@ -31,3 +31,4 @@
 - 2025-12-21: Added supplier suggestions for line enquiry based on the description filter so relevant suppliers appear in a dropdown when selecting the supplier field.
 - 2025-12-22: Loaded all suppliers for the line entry enquiry when no filters are set so the supplier field can be pre-populated quickly.
 - 2025-12-23: Added Exo as the primary typeface via Google Fonts for a consistent dashboard look.
+- 2025-12-24: Purchase order details now load inside the dashboard content area with AJAX-friendly navigation and shared view helpers.

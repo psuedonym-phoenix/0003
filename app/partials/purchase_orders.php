@@ -333,7 +333,9 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                     ?>
                                     <a
                                         class="btn btn-outline-primary btn-sm"
-                                        href="po_view.php<?php echo $viewQuery !== '' ? '?' . e($viewQuery) : ''; ?>"
+                                        href="index.php?view=purchase_order_view<?php echo $viewQuery !== '' ? '&amp;' . e($viewQuery) : ''; ?>"
+                                        data-view="purchase_order_view"
+                                        data-params="<?php echo e($viewQuery); ?>"
                                     >
                                         View
                                     </a>
