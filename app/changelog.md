@@ -10,3 +10,4 @@
 - 2025-02-08: Added order book management view with inline editing, update endpoint, and navigation entry.
 - 2025-02-09: Split order book management into visible and hidden sections with inline updates that move rows when visibility changes.
 - 2025-02-10: Added filtering, sorting, and editable quantity fields to order book management updates.
+- 2025-02-11: Fixed inline order book updates so scripts execute after AJAX navigation, restoring Update button behaviour.
