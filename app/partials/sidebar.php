@@ -15,6 +15,7 @@
     <a class="nav-link" href="#" data-view="suppliers">Suppliers</a>
     <a class="nav-link" href="#" data-view="order_books">Order Books</a>
     <a class="nav-link" href="#" data-view="purchase_orders">Purchase Orders</a>
+    <a class="nav-link" href="#" data-view="line_entry_enquiry">Line Entry Enquiry</a>
 </nav>
 <div class="mt-4 pt-3 border-top">
     <button id="themeToggle" type="button" class="btn btn-outline-primary w-100">Toggle Dark / Light</button>

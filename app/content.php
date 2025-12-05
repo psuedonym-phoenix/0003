@@ -9,6 +9,7 @@ $allowedViews = [
     'suppliers' => __DIR__ . '/partials/suppliers.php',
     'order_books' => __DIR__ . '/partials/order_books.php',
     'purchase_orders' => __DIR__ . '/partials/purchase_orders.php',
+    'line_entry_enquiry' => __DIR__ . '/partials/line_entry_enquiry.php',
 ];
 
 $requestedView = $_GET['view'] ?? 'dashboard';
