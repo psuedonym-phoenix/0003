@@ -413,7 +413,13 @@ if ($hasFilters) {
                                 $displayUnitPrice = $isTransactionalLine
                                     ? (float) ($row['ex_vat_amount'] ?? 0)
                                     : (float) ($row['net_price'] ?? 0);
-                                $displayAmount = (float) ($row['ex_vat_amount'] ?? 0);
+
+                                // The amount column must mirror the requested business rule:
+                                // - STANDARD lines show the net unit price
+                                // - TXN lines show the ex-VAT amount
+                                $displayAmount = $isTransactionalLine
+                                    ? (float) ($row['ex_vat_amount'] ?? 0)
+                                    : (float) ($row['net_price'] ?? 0);
 
                                 $poLinkParams = build_query([
                                     'po_number' => $row['po_number'],
