@@ -160,8 +160,37 @@ if ($selectedBook !== '') {
         return;
     }
 
-    selector.addEventListener('change', async (event) => {
-        const params = new URLSearchParams({ view: 'purchase_orders', order_book: event.target.value });
+    // Swap the content area HTML and ensure inline scripts run after insertion so event handlers stay active.
+    function replaceContentWithScripts(html) {
+        contentArea.innerHTML = html;
+        const scripts = contentArea.querySelectorAll('script');
+
+        scripts.forEach((oldScript) => {
+            const newScript = document.createElement('script');
+
+            Array.from(oldScript.attributes).forEach((attr) => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+
+            newScript.textContent = oldScript.textContent;
+            oldScript.replaceWith(newScript);
+        });
+    }
+
+    // Use delegated change handling so the order book dropdown continues to trigger reloads even after replacement.
+    if (contentArea.dataset.orderBookDelegateBound === 'true') {
+        return;
+    }
+    contentArea.dataset.orderBookDelegateBound = 'true';
+
+    contentArea.addEventListener('change', async (event) => {
+        const target = event.target;
+
+        if (!(target instanceof HTMLSelectElement) || target.id !== 'orderBookSelect') {
+            return;
+        }
+
+        const params = new URLSearchParams({ view: 'purchase_orders', order_book: target.value });
 
         try {
             const response = await fetch(`content.php?${params.toString()}`, {
@@ -173,7 +202,7 @@ if ($selectedBook !== '') {
             }
 
             const html = await response.text();
-            contentArea.innerHTML = html;
+            replaceContentWithScripts(html);
         } catch (error) {
             const alert = document.createElement('div');
             alert.className = 'alert alert-danger mt-3';

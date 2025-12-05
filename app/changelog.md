@@ -12,3 +12,4 @@
 - 2025-02-10: Added filtering, sorting, and editable quantity fields to order book management updates.
 - 2025-02-11: Fixed inline order book updates so scripts execute after AJAX navigation, restoring Update button behaviour.
 - 2025-02-12: Simplified purchase orders view to use only visible order books via dropdown while removing the in-page order book listing.
+- 2025-12-05: Rehydrated purchase order partial scripts and delegated the order book change handler to keep reloads working after AJAX swaps.
