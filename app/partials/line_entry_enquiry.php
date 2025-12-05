@@ -386,7 +386,7 @@ if ($hasFilters) {
                                 $poLinkParams = build_query([
                                     'po_number' => $row['po_number'],
                                     'order_book' => $selectedBook,
-                                    'view' => 'purchase_orders',
+                                    'supplier' => $supplierQuery,
                                 ]);
                                 ?>
                                 <tr>
@@ -399,9 +399,9 @@ if ($hasFilters) {
                                     <td class="text-end">
                                         <a
                                             class="btn btn-outline-primary btn-sm"
-                                            href="po_view.php?<?php echo $poLinkParams; ?>"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                            href="index.php?view=purchase_order_view<?php echo $poLinkParams !== '' ? '&amp;' . e($poLinkParams) : ''; ?>"
+                                            data-view="purchase_order_view"
+                                            data-params="<?php echo e($poLinkParams); ?>"
                                         >
                                             View PO
                                         </a>
