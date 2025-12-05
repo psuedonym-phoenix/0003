@@ -169,6 +169,7 @@ if ($hasFilters) {
             pol.line_type,
             pol.quantity,
             pol.unit,
+            pol.unit_price,
             pol.net_price,
             pol.ex_vat_amount
         FROM purchase_order_lines pol
@@ -412,7 +413,7 @@ if ($hasFilters) {
                                 $displayUnit = $isTransactionalLine ? 'TXN' : (string) ($row['unit'] ?? '');
                                 $displayUnitPrice = $isTransactionalLine
                                     ? (float) ($row['ex_vat_amount'] ?? 0)
-                                    : (float) ($row['net_price'] ?? 0);
+                                    : (float) ($row['unit_price'] ?? 0);
 
                                 // The amount column must mirror the requested business rule:
                                 // - STANDARD lines show the net unit price
