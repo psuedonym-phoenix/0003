@@ -62,7 +62,7 @@ $countQuery =
 
 // Fetch the latest version for each purchase order number and support filtering by order book.
 $orderQuery =
-    "SELECT po.id, po.po_number, po.order_book, po.order_sheet_no, po.supplier_name, po.order_date, po.total_amount, po.created_at
+    "SELECT po.id, po.po_number, po.order_book, po.supplier_name, po.order_date, po.total_amount, po.created_at
      FROM purchase_orders po
      INNER JOIN ($latestPerPoSubquery) latest ON latest.po_number = po.po_number AND latest.latest_id = po.id";
 
@@ -219,19 +219,29 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                 outline: 2px solid var(--bs-primary);
                 outline-offset: 2px;
             }
+
+            #purchaseOrdersTable thead.sticky-table-header th {
+                position: sticky;
+                top: var(--table-header-offset, 0);
+                z-index: 6;
+                background-color: var(--bs-table-bg, #fff);
+            }
         </style>
 
         <div class="table-responsive">
             <table id="purchaseOrdersTable" class="table table-sm align-middle mb-0">
-                <thead class="table-light">
+                <thead class="table-light sticky-table-header">
                     <tr>
                         <th scope="col">
                             <button type="button" class="sortable-header" data-sort-key="po_number">
                                 PO Number
                             </button>
                         </th>
-                        <th scope="col">Order Sheet</th>
-                        <th scope="col">Supplier</th>
+                        <th scope="col">
+                            <button type="button" class="sortable-header" data-sort-key="supplier_name">
+                                Supplier
+                            </button>
+                        </th>
                         <th scope="col">
                             <button type="button" class="sortable-header" data-sort-key="order_date" data-sort-type="date">
                                 Order Date
@@ -242,13 +252,17 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                 Total Amount
                             </button>
                         </th>
-                        <th scope="col">Uploaded</th>
+                        <th scope="col">
+                            <button type="button" class="sortable-header" data-sort-key="created_at" data-sort-type="date">
+                                Uploaded
+                            </button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($orders)) : ?>
                         <tr>
-                            <td colspan="6" class="text-secondary">No purchase orders were found for the current selection.</td>
+                            <td colspan="5" class="text-secondary">No purchase orders were found for the current selection.</td>
                         </tr>
                     <?php else : ?>
                         <?php foreach ($orders as $order) : ?>
@@ -257,9 +271,9 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                 data-order-date="<?php echo e($order['order_date']); ?>"
                                 data-total-amount="<?php echo e($order['total_amount']); ?>"
                                 data-supplier-name="<?php echo e($order['supplier_name']); ?>"
+                                data-created-at="<?php echo e($order['created_at']); ?>"
                             >
                                 <td class="fw-semibold"><?php echo e($order['po_number']); ?></td>
-                                <td><?php echo e($order['order_sheet_no']); ?></td>
                                 <td><?php echo e($order['supplier_name']); ?></td>
                                 <td><?php echo e($order['order_date']); ?></td>
                                 <td class="text-end"><?php echo number_format((float) $order['total_amount'], 2); ?></td>
@@ -301,6 +315,20 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
     const toggleHiddenBooks = document.getElementById('toggleHiddenBooks');
     const currentShowHidden = '<?php echo $showHiddenBooks ? '1' : '0'; ?>';
     const currentPage = Number('<?php echo $currentPage; ?>') || 1;
+
+    function updateStickyHeaderOffset() {
+        const headerBar = document.querySelector('.app-header');
+        const headerHeight = headerBar ? headerBar.getBoundingClientRect().height : 0;
+
+        // Provide a small gap so the sticky table header does not sit flush against the main header bar.
+        document.documentElement.style.setProperty('--table-header-offset', `${headerHeight + 8}px`);
+    }
+
+    updateStickyHeaderOffset();
+    if (!window.purchaseOrdersStickyOffsetBound) {
+        window.addEventListener('resize', updateStickyHeaderOffset);
+        window.purchaseOrdersStickyOffsetBound = true;
+    }
 
     function buildParams(overrides = {}) {
         const shouldShowHidden = overrides.showHidden ?? currentShowHidden === '1';
@@ -458,7 +486,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
 
         if (rows.length === 0) {
             const emptyRow = document.createElement('tr');
-            emptyRow.innerHTML = '<td colspan="6" class="text-secondary">No purchase orders match the current filters.</td>';
+            emptyRow.innerHTML = '<td colspan="5" class="text-secondary">No purchase orders match the current filters.</td>';
             tableBody.appendChild(emptyRow);
             return;
         }
