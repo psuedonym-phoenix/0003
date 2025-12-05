@@ -165,7 +165,12 @@ if ($hasFilters) {
             po.supplier_name,
             po.order_date,
             pol.line_no,
-            pol.description
+            pol.description,
+            pol.line_type,
+            pol.quantity,
+            pol.unit,
+            pol.net_price,
+            pol.ex_vat_amount
         FROM purchase_order_lines pol
         INNER JOIN purchase_orders po ON po.id = pol.purchase_order_id
         INNER JOIN ($latestPerPoSubquery) latest ON latest.po_number = po.po_number AND latest.latest_id = po.id
@@ -381,21 +386,33 @@ if ($hasFilters) {
                                     </button>
                                 </th>
                             <?php endforeach; ?>
+                            <th scope="col" class="text-end">Quantity</th>
+                            <th scope="col">Unit</th>
+                            <th scope="col" class="text-end">Unit price / Amount</th>
                             <th scope="col" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (!$hasFilters) : ?>
                             <tr>
-                                <td colspan="7" class="text-center text-secondary py-4">Add a filter above to start the line enquiry.</td>
+                                <td colspan="10" class="text-center text-secondary py-4">Add a filter above to start the line enquiry.</td>
                             </tr>
                         <?php elseif ($totalMatches === 0) : ?>
                             <tr>
-                                <td colspan="7" class="text-center text-warning py-4">No line items matched your filters.</td>
+                                <td colspan="10" class="text-center text-warning py-4">No line items matched your filters.</td>
                             </tr>
                         <?php else : ?>
                             <?php foreach ($results as $row) : ?>
                                 <?php
+                                $isTransactionalLine = strtoupper((string) ($row['line_type'] ?? '')) === 'TXN';
+
+                                // Follow the requested display rules for transactional and standard lines.
+                                $displayQuantity = $isTransactionalLine ? 1 : (float) ($row['quantity'] ?? 0);
+                                $displayUnit = $isTransactionalLine ? 'TXN' : (string) ($row['unit'] ?? '');
+                                $displayUnitPrice = $isTransactionalLine
+                                    ? (float) ($row['ex_vat_amount'] ?? 0)
+                                    : (float) ($row['net_price'] ?? 0);
+
                                 $poLinkParams = build_query([
                                     'po_number' => $row['po_number'],
                                     'order_book' => $selectedBook,
@@ -416,6 +433,9 @@ if ($hasFilters) {
                                     <td><?php echo e($row['order_date'] ?? ''); ?></td>
                                     <td><?php echo e($row['line_no']); ?></td>
                                     <td><?php echo e($row['description']); ?></td>
+                                    <td class="text-end"><?php echo number_format($displayQuantity, 2); ?></td>
+                                    <td><?php echo e($displayUnit); ?></td>
+                                    <td class="text-end"><?php echo number_format($displayUnitPrice, 2); ?></td>
                                     <td class="text-end">
                                         <a
                                             class="btn btn-outline-primary btn-sm"
