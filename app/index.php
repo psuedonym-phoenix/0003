@@ -64,7 +64,23 @@ require_authentication();
                     }
 
                     const html = await response.text();
+
+                    // Replace content while re-executing any inline scripts contained in the partial.
                     contentArea.innerHTML = html;
+                    const scripts = contentArea.querySelectorAll('script');
+                    scripts.forEach((oldScript) => {
+                        const newScript = document.createElement('script');
+
+                        // Preserve existing script attributes such as type or nonce.
+                        Array.from(oldScript.attributes).forEach((attr) => {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+
+                        // Copy inline content to ensure logic executes after insertion via innerHTML.
+                        newScript.textContent = oldScript.textContent;
+
+                        oldScript.replaceWith(newScript);
+                    });
                 } catch (err) {
                     contentArea.innerHTML = '<div class="alert alert-danger" role="alert">There was a problem loading this section. Please try again.</div>';
                 }
