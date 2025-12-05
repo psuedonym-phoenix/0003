@@ -33,3 +33,4 @@
 - 2025-12-23: Added Exo as the primary typeface via Google Fonts for a consistent dashboard look.
 - 2025-12-24: Purchase order details now load inside the dashboard content area with AJAX-friendly navigation and shared view helpers.
 - 2025-12-25: Updated the line entry enquiry View PO action to open purchase orders inside the dashboard instead of a new tab.
+- 2025-12-26: Preserved line entry enquiry filters when viewing a purchase order so the back action returns to the same search.

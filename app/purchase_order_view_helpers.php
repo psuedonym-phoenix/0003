@@ -30,6 +30,11 @@ function fetch_purchase_order_view(array $input): array
     $showHidden = ($input['show_hidden'] ?? '0') === '1';
     $returnSupplier = trim($input['supplier'] ?? '');
     $returnPage = max(1, (int) ($input['page'] ?? 1));
+    $originView = $input['origin_view'] ?? 'purchase_orders';
+
+    if (!in_array($originView, ['purchase_orders', 'line_entry_enquiry'], true)) {
+        $originView = 'purchase_orders';
+    }
 
     if ($poNumber === '') {
         return [
@@ -141,17 +146,45 @@ function fetch_purchase_order_view(array $input): array
     }
 
     $sharedParams = [
-        'order_book' => $selectedBook,
-        'supplier' => $returnSupplier,
+        'origin_view' => $originView,
     ];
 
-    if ($showHidden) {
-        $sharedParams['show_hidden'] = '1';
+    if ($originView === 'line_entry_enquiry') {
+        $lineReturnKeys = [
+            'po_number',
+            'order_book',
+            'supplier',
+            'query',
+            'order_date_from',
+            'order_date_to',
+            'sort_by',
+            'sort_dir',
+            'page',
+        ];
+
+        foreach ($lineReturnKeys as $key) {
+            $value = trim((string) ($input[$key] ?? ''));
+
+            if ($value === '') {
+                continue;
+            }
+
+            $sharedParams[$key] = $value;
+        }
+    } else {
+        $sharedParams['order_book'] = $selectedBook;
+        $sharedParams['supplier'] = $returnSupplier;
+
+        if ($showHidden) {
+            $sharedParams['show_hidden'] = '1';
+        }
+
+        if ($returnPage > 1) {
+            $sharedParams['page'] = (string) $returnPage;
+        }
     }
 
-    if ($returnPage > 1) {
-        $sharedParams['page'] = (string) $returnPage;
-    }
+    $returnParams = ['view' => $originView] + $sharedParams;
 
     return [
         'purchaseOrder' => $purchaseOrder,
@@ -161,7 +194,7 @@ function fetch_purchase_order_view(array $input): array
         'previousPo' => $previousPo,
         'nextPo' => $nextPo,
         'sharedParams' => $sharedParams,
-        'returnParams' => array_merge(['view' => 'purchase_orders'], $sharedParams),
+        'returnParams' => $returnParams,
         'status' => 200,
     ];
 }

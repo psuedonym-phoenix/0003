@@ -387,6 +387,13 @@ if ($hasFilters) {
                                     'po_number' => $row['po_number'],
                                     'order_book' => $selectedBook,
                                     'supplier' => $supplierQuery,
+                                    'query' => $searchQuery,
+                                    'order_date_from' => $orderDateFrom,
+                                    'order_date_to' => $orderDateTo,
+                                    'sort_by' => $sortBy,
+                                    'sort_dir' => $sortDirection,
+                                    'page' => $currentPage,
+                                    'origin_view' => 'line_entry_enquiry',
                                 ]);
                                 ?>
                                 <tr>
