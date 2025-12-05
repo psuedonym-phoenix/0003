@@ -51,6 +51,15 @@ $reference      = get_field($data, 'reference');
 $created_by     = get_field($data, 'created_by');
 $source_file    = get_field($data, 'source_filename');
 
+// NEW: order type (for legacy clients this will default to "standard")
+$order_type_raw = strtolower(get_field($data, 'order_type', 'standard'));
+if ($order_type_raw !== 'standard' && $order_type_raw !== 'transactional') {
+    // Any unknown / invalid value falls back to standard
+    $order_type = 'standard';
+} else {
+    $order_type = $order_type_raw;
+}
+
 // NEW: order book + sheet no
 $order_book     = get_field($data, 'order_book');      // from T2
 $order_sheet_no = get_field($data, 'order_sheet_no');  // from T1
@@ -127,6 +136,7 @@ try {
             cost_code_description,
             terms,
             reference,
+            order_type,
             subtotal,
             vat_percent,
             vat_amount,
@@ -150,6 +160,7 @@ try {
             :cost_code_description,
             :terms,
             :reference,
+            :order_type,
             :subtotal,
             :vat_percent,
             :vat_amount,
@@ -165,27 +176,28 @@ try {
     ");
 
     $insert->execute([
-        ':po_number'            => $po_number,
-        ':order_book'           => $order_book,
-        ':order_sheet_no'       => $order_sheet_no,
-        ':supplier_id'          => $supplier_id,
-        ':supplier_code'        => $supplier_code,
-        ':supplier_name'        => $supplier_name,
-        ':order_date'           => $order_date,
-        ':cost_code'            => $cost_code,
-        ':cost_code_description'=> $cost_code_desc,
-        ':terms'                => $terms,
-        ':reference'            => $reference,
-        ':subtotal'             => $subtotal,
-        ':vat_percent'          => $vat_percent,
-        ':vat_amount'           => $vat_amount,
-        ':misc1_label'          => $misc1_label,
-        ':misc1_amount'         => $misc1_amount,
-        ':misc2_label'          => $misc2_label,
-        ':misc2_amount'         => $misc2_amount,
-        ':total_amount'         => $total_amount,
-        ':created_by'           => $created_by,
-        ':source_filename'      => $source_file
+        ':po_number'             => $po_number,
+        ':order_book'            => $order_book,
+        ':order_sheet_no'        => $order_sheet_no,
+        ':supplier_id'           => $supplier_id,
+        ':supplier_code'         => $supplier_code,
+        ':supplier_name'         => $supplier_name,
+        ':order_date'            => $order_date,
+        ':cost_code'             => $cost_code,
+        ':cost_code_description' => $cost_code_desc,
+        ':terms'                 => $terms,
+        ':reference'             => $reference,
+        ':order_type'            => $order_type,
+        ':subtotal'              => $subtotal,
+        ':vat_percent'           => $vat_percent,
+        ':vat_amount'            => $vat_amount,
+        ':misc1_label'           => $misc1_label,
+        ':misc1_amount'          => $misc1_amount,
+        ':misc2_label'           => $misc2_label,
+        ':misc2_amount'          => $misc2_amount,
+        ':total_amount'          => $total_amount,
+        ':created_by'            => $created_by,
+        ':source_filename'       => $source_file
     ]);
 
     $newId = (int)$pdo->lastInsertId();
