@@ -51,6 +51,7 @@ $selectedBook = $_GET['order_book'] ?? '';
 $orders = [];
 $itemsPerPage = 360;
 $currentPage = max(1, (int) ($_GET['page'] ?? 1));
+$supplierFilter = trim($_GET['supplier'] ?? '');
 
 $latestPerPoSubquery = 'SELECT po_number, MAX(id) AS latest_id FROM purchase_orders GROUP BY po_number';
 
@@ -66,14 +67,33 @@ $orderQuery =
      FROM purchase_orders po
      INNER JOIN ($latestPerPoSubquery) latest ON latest.po_number = po.po_number AND latest.latest_id = po.id";
 
+$filters = [];
+
 // When a specific order book is chosen, apply the filter; otherwise show all order books.
 if ($selectedBook !== '') {
-    $orderQuery .= ' WHERE po.order_book = :book';
-    $countQuery .= ' WHERE po.order_book = :book';
+    $filters[] = 'po.order_book = :book';
+}
+
+// When filtering by supplier name, allow partial matches.
+if ($supplierFilter !== '') {
+    $filters[] = 'po.supplier_name LIKE :supplier';
+}
+
+if (!empty($filters)) {
+    $whereClause = ' WHERE ' . implode(' AND ', $filters);
+    $orderQuery .= $whereClause;
+    $countQuery .= $whereClause;
 }
 
 // Default the view to PO Number ascending so users immediately see sorted results and stay within the current page.
-$orderQuery .= ' ORDER BY po.po_number ASC LIMIT :limit OFFSET :offset';
+$orderQuery .= ' ORDER BY po.po_number ASC';
+
+// When viewing all order books and applying a supplier filter, bypass pagination so all matching suppliers are shown.
+$shouldBypassPagination = $selectedBook === '' && $supplierFilter !== '';
+
+if (!$shouldBypassPagination) {
+    $orderQuery .= ' LIMIT :limit OFFSET :offset';
+}
 
 $ordersStmt = $pdo->prepare($orderQuery);
 $countStmt = $pdo->prepare($countQuery);
@@ -83,15 +103,23 @@ if ($selectedBook !== '') {
     $countStmt->bindValue(':book', $selectedBook, PDO::PARAM_STR);
 }
 
+if ($supplierFilter !== '') {
+    $supplierLike = '%' . $supplierFilter . '%';
+    $ordersStmt->bindValue(':supplier', $supplierLike, PDO::PARAM_STR);
+    $countStmt->bindValue(':supplier', $supplierLike, PDO::PARAM_STR);
+}
+
 $countStmt->execute();
 $totalOrdersCount = (int) $countStmt->fetchColumn();
 
-$totalPages = max(1, (int) ceil($totalOrdersCount / $itemsPerPage));
+$totalPages = $shouldBypassPagination ? 1 : max(1, (int) ceil($totalOrdersCount / $itemsPerPage));
 $currentPage = min($currentPage, $totalPages);
 $offset = ($currentPage - 1) * $itemsPerPage;
 
-$ordersStmt->bindValue(':limit', $itemsPerPage, PDO::PARAM_INT);
-$ordersStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+if (!$shouldBypassPagination) {
+    $ordersStmt->bindValue(':limit', $itemsPerPage, PDO::PARAM_INT);
+    $ordersStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+}
 
 $ordersStmt->execute();
 $orders = $ordersStmt->fetchAll();
@@ -189,6 +217,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                     placeholder="Type to filter suppliers"
                     list="supplierSuggestions"
                     autocomplete="off"
+                    value="<?php echo e($supplierFilter); ?>"
                     <?php echo empty($orders) ? 'disabled' : ''; ?>
                 >
                 <span class="badge text-bg-light border">Total orders: <?php echo $totalOrdersCount ?? 0; ?></span>
@@ -219,30 +248,11 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                 outline: 2px solid var(--bs-primary);
                 outline-offset: 2px;
             }
-
-            .purchase-orders-table-wrapper {
-                position: relative;
-            }
-
-            .purchase-orders-table-wrapper thead.sticky-table-header {
-                position: sticky;
-                top: var(--table-header-offset, 0);
-                z-index: 6;
-                background-color: var(--bs-table-bg, #fff);
-            }
-
-            #purchaseOrdersTable thead.sticky-table-header th {
-                position: sticky;
-                top: var(--table-header-offset, 0);
-                z-index: 7;
-                background-color: var(--bs-table-bg, #fff);
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
         </style>
 
-        <div class="table-responsive purchase-orders-table-wrapper">
+        <div class="table-responsive">
             <table id="purchaseOrdersTable" class="table table-sm align-middle mb-0">
-                <thead class="table-light sticky-table-header">
+                <thead class="table-light">
                     <tr>
                         <th scope="col">
                             <button type="button" class="sortable-header" data-sort-key="po_number">
@@ -323,33 +333,14 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
     const contentArea = document.getElementById('contentArea');
     const selector = document.getElementById('orderBookSelect');
     const ordersTable = document.getElementById('purchaseOrdersTable');
-    const ordersTableWrapper = document.querySelector('.purchase-orders-table-wrapper');
     const supplierFilter = document.getElementById('supplierFilter');
     const toggleHiddenBooks = document.getElementById('toggleHiddenBooks');
     const currentShowHidden = '<?php echo $showHiddenBooks ? '1' : '0'; ?>';
     const currentPage = Number('<?php echo $currentPage; ?>') || 1;
 
-    function updateStickyHeaderOffset() {
-        const headerBar = document.querySelector('.app-header');
-        const headerHeight = headerBar ? headerBar.getBoundingClientRect().height : 0;
-        const offset = headerHeight + 8;
-
-        // Provide a small gap so the sticky table header does not sit flush against the main header bar.
-        if (ordersTableWrapper) {
-            ordersTableWrapper.style.setProperty('--table-header-offset', `${offset}px`);
-        } else {
-            document.documentElement.style.setProperty('--table-header-offset', `${offset}px`);
-        }
-    }
-
-    updateStickyHeaderOffset();
-    if (!window.purchaseOrdersStickyOffsetBound) {
-        window.addEventListener('resize', updateStickyHeaderOffset);
-        window.purchaseOrdersStickyOffsetBound = true;
-    }
-
     function buildParams(overrides = {}) {
         const shouldShowHidden = overrides.showHidden ?? currentShowHidden === '1';
+        const supplierValue = (overrides.supplier ?? (supplierFilter ? supplierFilter.value : '') ?? '').trim();
         const params = new URLSearchParams({
             view: 'purchase_orders',
             order_book: overrides.orderBook ?? (selector ? selector.value : ''),
@@ -358,6 +349,10 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
 
         if (shouldShowHidden) {
             params.set('show_hidden', '1');
+        }
+
+        if (supplierValue !== '') {
+            params.set('supplier', supplierValue);
         }
 
         return params;
@@ -463,7 +458,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
         });
     }
 
-    // Provide client-side sorting and supplier filtering without extra server calls.
+    // Provide client-side sorting and supplier filtering, while allowing server reloads when filtering all books.
     if (!ordersTable) {
         return;
     }
@@ -574,9 +569,29 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
     applySort(currentSort.key, currentSort.type, currentSort.direction);
 
     if (supplierFilter) {
+        let supplierFilterTimeout;
+
+        const triggerSupplierReload = async (value) => {
+            const params = buildParams({ supplier: value, page: 1 });
+            await fetchAndReplace(params, 'There was a problem filtering suppliers. Please try again.');
+        };
+
         supplierFilter.addEventListener('input', (event) => {
             const target = event.target;
-            applyFilter(target.value || '');
+            const newValue = target.value || '';
+
+            applyFilter(newValue);
+
+            window.clearTimeout(supplierFilterTimeout);
+
+            supplierFilterTimeout = window.setTimeout(() => {
+                // Only reload from the server when all order books are selected so we can return every matching supplier.
+                if (selector && selector.value !== '') {
+                    return;
+                }
+
+                triggerSupplierReload(newValue.trim());
+            }, 400);
         });
     }
 })();
