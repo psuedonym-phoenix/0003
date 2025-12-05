@@ -13,3 +13,4 @@
 - 2025-02-11: Fixed inline order book updates so scripts execute after AJAX navigation, restoring Update button behaviour.
 - 2025-02-12: Simplified purchase orders view to use only visible order books via dropdown while removing the in-page order book listing.
 - 2025-12-05: Rehydrated purchase order partial scripts and delegated the order book change handler to keep reloads working after AJAX swaps.
+- 2025-12-06: Added client-side purchase order sorting and supplier filtering with unobtrusive JavaScript.

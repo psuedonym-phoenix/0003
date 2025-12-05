@@ -103,23 +103,45 @@ if ($selectedBook !== '') {
 
 <div class="card border-0 shadow-sm">
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
             <div>
                 <h3 class="h6 mb-1">Orders in book: <?php echo $selectedBook !== '' ? e($selectedBook) : 'None selected'; ?></h3>
                 <small class="text-secondary">Showing all purchase orders that belong to the selected order book.</small>
             </div>
-            <span class="badge text-bg-light border">Total orders: <?php echo count($orders); ?></span>
+            <div class="d-flex align-items-center gap-2">
+                <label for="supplierFilter" class="form-label mb-0">Supplier filter:</label>
+                <input
+                    type="search"
+                    id="supplierFilter"
+                    class="form-control form-control-sm"
+                    placeholder="Type to filter suppliers"
+                    <?php echo empty($orders) ? 'disabled' : ''; ?>
+                >
+                <span class="badge text-bg-light border">Total orders: <?php echo count($orders); ?></span>
+            </div>
         </div>
 
         <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
+            <table id="purchaseOrdersTable" class="table table-sm align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th scope="col">PO Number</th>
+                        <th scope="col">
+                            <button type="button" class="btn btn-link p-0 text-decoration-none" data-sort-key="po_number">
+                                PO Number
+                            </button>
+                        </th>
                         <th scope="col">Order Sheet</th>
                         <th scope="col">Supplier</th>
-                        <th scope="col">Order Date</th>
-                        <th scope="col" class="text-end">Total Amount</th>
+                        <th scope="col">
+                            <button type="button" class="btn btn-link p-0 text-decoration-none" data-sort-key="order_date" data-sort-type="date">
+                                Order Date
+                            </button>
+                        </th>
+                        <th scope="col" class="text-end">
+                            <button type="button" class="btn btn-link p-0 text-decoration-none" data-sort-key="total_amount" data-sort-type="number">
+                                Total Amount
+                            </button>
+                        </th>
                         <th scope="col">Uploaded</th>
                     </tr>
                 </thead>
@@ -134,7 +156,12 @@ if ($selectedBook !== '') {
                         </tr>
                     <?php else : ?>
                         <?php foreach ($orders as $order) : ?>
-                            <tr>
+                            <tr
+                                data-po-number="<?php echo e($order['po_number']); ?>"
+                                data-order-date="<?php echo e($order['order_date']); ?>"
+                                data-total-amount="<?php echo e($order['total_amount']); ?>"
+                                data-supplier-name="<?php echo e($order['supplier_name']); ?>"
+                            >
                                 <td class="fw-semibold"><?php echo e($order['po_number']); ?></td>
                                 <td><?php echo e($order['order_sheet_no']); ?></td>
                                 <td><?php echo e($order['supplier_name']); ?></td>
@@ -153,10 +180,12 @@ if ($selectedBook !== '') {
 <script>
 // Reload the purchase orders view when the order book selection changes so the table refreshes.
 (function () {
-    const selector = document.getElementById('orderBookSelect');
     const contentArea = document.getElementById('contentArea');
+    const selector = document.getElementById('orderBookSelect');
+    const ordersTable = document.getElementById('purchaseOrdersTable');
+    const supplierFilter = document.getElementById('supplierFilter');
 
-    if (!selector || !contentArea) {
+    if (!contentArea) {
         return;
     }
 
@@ -178,37 +207,150 @@ if ($selectedBook !== '') {
     }
 
     // Use delegated change handling so the order book dropdown continues to trigger reloads even after replacement.
-    if (contentArea.dataset.orderBookDelegateBound === 'true') {
+    if (selector && contentArea.dataset.orderBookDelegateBound !== 'true') {
+        contentArea.dataset.orderBookDelegateBound = 'true';
+
+        contentArea.addEventListener('change', async (event) => {
+            const target = event.target;
+
+            if (!(target instanceof HTMLSelectElement) || target.id !== 'orderBookSelect') {
+                return;
+            }
+
+            const params = new URLSearchParams({ view: 'purchase_orders', order_book: target.value });
+
+            try {
+                const response = await fetch(`content.php?${params.toString()}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Unable to load order book');
+                }
+
+                const html = await response.text();
+                replaceContentWithScripts(html);
+            } catch (error) {
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-danger mt-3';
+                alert.textContent = 'There was a problem loading the selected order book. Please try again.';
+                contentArea.prepend(alert);
+            }
+        });
+    }
+
+    // Provide client-side sorting and supplier filtering without extra server calls.
+    if (!ordersTable) {
         return;
     }
-    contentArea.dataset.orderBookDelegateBound = 'true';
 
-    contentArea.addEventListener('change', async (event) => {
-        const target = event.target;
+    const tableBody = ordersTable.querySelector('tbody');
+    const orderRows = tableBody ? Array.from(tableBody.querySelectorAll('tr[data-po-number]')) : [];
 
-        if (!(target instanceof HTMLSelectElement) || target.id !== 'orderBookSelect') {
+    // If there are no data rows (only placeholder messaging), skip attaching interactive handlers.
+    if (!tableBody || orderRows.length === 0) {
+        return;
+    }
+
+    let filteredRows = [...orderRows];
+    let currentSort = { key: null, type: 'string', direction: 'asc' };
+
+    function toCamelCase(key) {
+        return key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    }
+
+    function getComparableValue(row, key, type) {
+        const datasetKey = toCamelCase(key);
+        const rawValue = row.dataset[datasetKey] || '';
+
+        if (type === 'number') {
+            return parseFloat(rawValue) || 0;
+        }
+
+        if (type === 'date') {
+            const timestamp = Date.parse(rawValue);
+            return Number.isNaN(timestamp) ? rawValue : timestamp;
+        }
+
+        return rawValue.toString().toLowerCase();
+    }
+
+    function renderRows(rows) {
+        tableBody.innerHTML = '';
+
+        if (rows.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.innerHTML = '<td colspan="6" class="text-secondary">No purchase orders match the current filters.</td>';
+            tableBody.appendChild(emptyRow);
             return;
         }
 
-        const params = new URLSearchParams({ view: 'purchase_orders', order_book: target.value });
+        rows.forEach((row) => tableBody.appendChild(row));
+    }
 
-        try {
-            const response = await fetch(`content.php?${params.toString()}`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            });
+    function applySort(key, type, direction) {
+        if (!key) {
+            renderRows(filteredRows);
+            return;
+        }
 
-            if (!response.ok) {
-                throw new Error('Unable to load order book');
+        const sorted = [...filteredRows].sort((a, b) => {
+            const aValue = getComparableValue(a, key, type);
+            const bValue = getComparableValue(b, key, type);
+
+            if (aValue < bValue) {
+                return direction === 'asc' ? -1 : 1;
             }
 
-            const html = await response.text();
-            replaceContentWithScripts(html);
-        } catch (error) {
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-danger mt-3';
-            alert.textContent = 'There was a problem loading the selected order book. Please try again.';
-            contentArea.prepend(alert);
+            if (aValue > bValue) {
+                return direction === 'asc' ? 1 : -1;
+            }
+
+            return 0;
+        });
+
+        renderRows(sorted);
+    }
+
+    function applyFilter(inputValue) {
+        const normalized = inputValue.trim().toLowerCase();
+
+        if (normalized === '') {
+            filteredRows = [...orderRows];
+        } else {
+            filteredRows = orderRows.filter((row) => {
+                const supplierName = (row.dataset.supplierName || '').toLowerCase();
+                return supplierName.includes(normalized);
+            });
         }
+
+        if (currentSort.key) {
+            applySort(currentSort.key, currentSort.type, currentSort.direction);
+        } else {
+            renderRows(filteredRows);
+        }
+    }
+
+    ordersTable.querySelectorAll('[data-sort-key]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const key = button.dataset.sortKey;
+            const type = button.dataset.sortType || 'string';
+
+            if (!key) {
+                return;
+            }
+
+            const direction = currentSort.key === key && currentSort.direction === 'asc' ? 'desc' : 'asc';
+            currentSort = { key, type, direction };
+            applySort(key, type, direction);
+        });
     });
+
+    if (supplierFilter) {
+        supplierFilter.addEventListener('input', (event) => {
+            const target = event.target;
+            applyFilter(target.value || '');
+        });
+    }
 })();
 </script>
