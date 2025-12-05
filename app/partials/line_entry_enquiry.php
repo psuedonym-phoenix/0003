@@ -274,9 +274,11 @@ if ($hasFilters) {
                             class="form-control form-control-sm"
                             id="lineSupplier"
                             name="supplier"
+                            list="lineSupplierSuggestions"
                             placeholder="Contains"
                             value="<?php echo e($supplierQuery); ?>"
                         >
+                        <datalist id="lineSupplierSuggestions"></datalist>
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
                         <label class="form-label mb-1" for="lineSearch">Description</label>
@@ -447,9 +449,12 @@ if ($hasFilters) {
         const sortByField = document.getElementById('lineSortBy');
         const sortDirField = document.getElementById('lineSortDir');
         const resetButton = document.getElementById('lineResetFilters');
+        const supplierSuggestions = document.getElementById('lineSupplierSuggestions');
 
         let activeSortBy = sortByField ? sortByField.value : 'po_number';
         let activeSortDirection = sortDirField ? sortDirField.value : 'asc';
+        let suggestionAbortController = null;
+        let suggestionDebounce = null;
 
         if (!contentArea) {
             return;
@@ -509,6 +514,91 @@ if ($hasFilters) {
             return params;
         }
 
+        function clearSupplierSuggestions() {
+            if (!supplierSuggestions) {
+                return;
+            }
+
+            supplierSuggestions.innerHTML = '';
+
+            if (supplierInput) {
+                supplierInput.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        async function refreshSupplierSuggestions() {
+            if (!searchInput || !supplierSuggestions) {
+                return;
+            }
+
+            const descriptionQuery = searchInput.value.trim();
+
+            if (descriptionQuery.length < 2) {
+                clearSupplierSuggestions();
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.set('description', descriptionQuery);
+
+            if (orderBookSelect && orderBookSelect.value !== '') {
+                params.set('order_book', orderBookSelect.value);
+            }
+
+            if (poNumberInput && poNumberInput.value.trim() !== '') {
+                params.set('po_number', poNumberInput.value.trim());
+            }
+
+            if (suggestionAbortController) {
+                suggestionAbortController.abort();
+            }
+
+            suggestionAbortController = new AbortController();
+
+            try {
+                const response = await fetch(`line_entry_supplier_suggestions.php?${params.toString()}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: suggestionAbortController.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                const payload = await response.json();
+
+                clearSupplierSuggestions();
+
+                if (!payload || !Array.isArray(payload.suggestions) || payload.suggestions.length === 0) {
+                    return;
+                }
+
+                payload.suggestions.forEach((name) => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    supplierSuggestions.appendChild(option);
+                });
+
+                if (supplierInput) {
+                    supplierInput.setAttribute('aria-expanded', 'true');
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    return;
+                }
+
+                clearSupplierSuggestions();
+            }
+        }
+
+        function queueSupplierSuggestions() {
+            if (suggestionDebounce) {
+                window.clearTimeout(suggestionDebounce);
+            }
+
+            suggestionDebounce = window.setTimeout(refreshSupplierSuggestions, 250);
+        }
+
         async function fetchAndSwap(params, errorMessage) {
             try {
                 const response = await fetch(`content.php?${params.toString()}`, {
@@ -543,7 +633,24 @@ if ($hasFilters) {
 
                 const params = buildParams(1);
                 await fetchAndSwap(params, 'There was a problem running the line enquiry. Please try again.');
+                queueSupplierSuggestions();
             });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', queueSupplierSuggestions);
+        }
+
+        if (orderBookSelect) {
+            orderBookSelect.addEventListener('change', queueSupplierSuggestions);
+        }
+
+        if (poNumberInput) {
+            poNumberInput.addEventListener('input', queueSupplierSuggestions);
+        }
+
+        if (supplierInput) {
+            supplierInput.addEventListener('focus', refreshSupplierSuggestions);
         }
 
         sortLinks.forEach((link) => {
