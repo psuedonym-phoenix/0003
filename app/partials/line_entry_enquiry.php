@@ -57,10 +57,18 @@ $selectedBook = trim($_GET['order_book'] ?? '');
 $poNumber = trim($_GET['po_number'] ?? '');
 $supplierQuery = trim($_GET['supplier'] ?? '');
 $searchQuery = trim($_GET['query'] ?? '');
+$searchTerms = [];
 $orderDateFrom = trim($_GET['order_date_from'] ?? '');
 $orderDateTo = trim($_GET['order_date_to'] ?? '');
 $itemsPerPage = 100;
 $currentPage = max(1, (int) ($_GET['page'] ?? 1));
+
+// Split multi-word searches into individual fragments so we can insist every piece appears in the description.
+if ($searchQuery !== '') {
+    $searchTerms = array_values(array_filter(preg_split('/\s+/', $searchQuery), static function ($term) {
+        return $term !== '';
+    }));
+}
 
 // Allow searching by any combination of filters but avoid scanning the full table when nothing is supplied.
 $hasFilters = $searchQuery !== ''
@@ -114,8 +122,10 @@ $results = [];
 if ($hasFilters) {
     $conditions = [];
 
-    if ($searchQuery !== '') {
-        $conditions[] = 'pol.description LIKE :search';
+    if (!empty($searchTerms)) {
+        foreach ($searchTerms as $index => $term) {
+            $conditions[] = "pol.description LIKE :search{$index}";
+        }
     }
 
     if ($selectedBook !== '') {
@@ -167,10 +177,13 @@ if ($hasFilters) {
     $countStmt = $pdo->prepare($countSql);
     $queryStmt = $pdo->prepare($querySql);
 
-    if ($searchQuery !== '') {
-        $searchTerm = '%' . $searchQuery . '%';
-        $countStmt->bindValue(':search', $searchTerm, PDO::PARAM_STR);
-        $queryStmt->bindValue(':search', $searchTerm, PDO::PARAM_STR);
+    if (!empty($searchTerms)) {
+        foreach ($searchTerms as $index => $term) {
+            $searchTerm = '%' . $term . '%';
+            $placeholder = ":search{$index}";
+            $countStmt->bindValue($placeholder, $searchTerm, PDO::PARAM_STR);
+            $queryStmt->bindValue($placeholder, $searchTerm, PDO::PARAM_STR);
+        }
     }
 
     if ($selectedBook !== '') {
