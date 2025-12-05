@@ -7,6 +7,7 @@ require_authentication();
 $allowedViews = [
     'dashboard' => __DIR__ . '/partials/dashboard.php',
     'suppliers' => __DIR__ . '/partials/suppliers.php',
+    'order_books' => __DIR__ . '/partials/order_books.php',
     'purchase_orders' => __DIR__ . '/partials/purchase_orders.php',
 ];
 

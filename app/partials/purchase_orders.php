@@ -85,7 +85,7 @@ if ($selectedBook !== '') {
             <small class="text-secondary">Select an order book to view all matching purchase orders.</small>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-primary btn-sm" type="button">Upload Order Book</button>
+            <button class="btn btn-primary btn-sm" type="button" data-view="order_books">Manage Order Books</button>
             <button class="btn btn-outline-secondary btn-sm" type="button">View History</button>
         </div>
     </div>
