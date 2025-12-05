@@ -5,6 +5,7 @@
 body {
     min-height: 100vh;
     background: var(--bs-body-bg);
+    font-family: 'Exo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .layout-shell {
