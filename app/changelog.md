@@ -24,3 +24,5 @@
 - 2025-12-14: Clearing supplier filters when switching order books so each selection starts unfiltered.
 - 2025-12-15: Added a purchase order detail page with navigation, a View action on purchase orders, and deep links that preserve order book filters when returning.
 - 2025-12-16: Moved purchase order Actions before Uploaded in the listing and added type-aware layouts for viewing standard vs transactional purchase orders.
+- 2025-12-17: Added a line entry enquiry view to search purchase order line descriptions directly from the sidebar.
+- 2025-12-18: Reordered the changelog to append new entries at the bottom to preserve log-style history.
