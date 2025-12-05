@@ -290,12 +290,12 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                 Total Amount
                             </button>
                         </th>
+                        <th scope="col" class="text-end">Actions</th>
                         <th scope="col">
                             <button type="button" class="sortable-header" data-sort-key="created_at" data-sort-type="date">
                                 Uploaded
                             </button>
                         </th>
-                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -316,7 +316,6 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                 <td><?php echo e($order['supplier_name']); ?></td>
                                 <td><?php echo e($order['order_date']); ?></td>
                                 <td class="text-end"><?php echo number_format((float) $order['total_amount'], 2); ?></td>
-                                <td><?php echo e($order['created_at']); ?></td>
                                 <td class="text-end">
                                     <?php
                                     $viewParams = [
@@ -339,6 +338,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                         View
                                     </a>
                                 </td>
+                                <td><?php echo e($order['created_at']); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

@@ -81,6 +81,23 @@ $linesStmt->bindValue(':purchase_order_id', $purchaseOrder['id'], PDO::PARAM_INT
 $linesStmt->execute();
 $lineItems = $linesStmt->fetchAll();
 
+// Determine the purchase order type from the header while tolerating legacy column names.
+$rawPoType = strtolower((string) ($purchaseOrder['po_type'] ?? $purchaseOrder['order_type'] ?? $purchaseOrder['line_type'] ?? ''));
+
+if ($rawPoType === '' && !empty($lineItems)) {
+    // Fallback to line metadata when the header type is missing so views still render useful columns.
+    $lineTypes = array_unique(array_filter(array_map(static function ($line) {
+        return strtolower((string) ($line['line_type'] ?? ''));
+    }, $lineItems)));
+
+    if (in_array('transactional', $lineTypes, true) || in_array('txn', $lineTypes, true)) {
+        $rawPoType = 'transactional';
+    }
+}
+
+$poType = $rawPoType === 'transactional' || $rawPoType === 'txn' ? 'transactional' : 'standard';
+$lineColumnCount = $poType === 'transactional' ? 7 : 8;
+
 // Build navigation across the latest PO in the selected order book (or all books when none is chosen).
 $navigationSql = "
     SELECT po.po_number
@@ -186,12 +203,16 @@ if ($nextPo !== null) {
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-3">
+            <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="text-secondary small">Order Book</div>
                     <div class="fw-semibold"><?php echo e($purchaseOrder['order_book'] ?? 'Not set'); ?></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-secondary small">Purchase Order Type</div>
+                    <div class="fw-semibold"><?php echo ucfirst($poType); ?></div>
                 </div>
                 <div class="col-md-4">
                     <div class="text-secondary small">Supplier</div>
@@ -222,7 +243,11 @@ if ($nextPo !== null) {
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                     <h2 class="h6 mb-0">Line items</h2>
-                    <small class="text-secondary">Showing the lines attached to this latest purchase order version.</small>
+                    <?php if ($poType === 'transactional') : ?>
+                        <small class="text-secondary">Transactional layout showing deposits and VAT breakdowns.</small>
+                    <?php else : ?>
+                        <small class="text-secondary">Standard layout showing item quantities, pricing, and discounts.</small>
+                    <?php endif; ?>
                 </div>
                 <span class="badge text-bg-light border">Total lines: <?php echo count($lineItems); ?></span>
             </div>
@@ -232,39 +257,49 @@ if ($nextPo !== null) {
                     <thead class="table-light">
                         <tr>
                             <th scope="col">Line #</th>
-                            <th scope="col">Type</th>
-                            <th scope="col">Date</th>
-                            <th scope="col">Item Code</th>
-                            <th scope="col">Description</th>
-                            <th scope="col" class="text-end">Quantity</th>
-                            <th scope="col">Unit</th>
-                            <th scope="col" class="text-end">Unit Price</th>
-                            <th scope="col" class="text-end">Net Price</th>
-                            <th scope="col" class="text-end">Ex VAT</th>
-                            <th scope="col" class="text-end">VAT</th>
-                            <th scope="col" class="text-end">Line Total</th>
+                            <?php if ($poType === 'transactional') : ?>
+                                <th scope="col">Date</th>
+                                <th scope="col">Description</th>
+                                <th scope="col" class="text-end">Deposit Amount</th>
+                                <th scope="col" class="text-end">Ex VAT Amount</th>
+                                <th scope="col" class="text-end">VAT Amount</th>
+                                <th scope="col" class="text-end">Line Total</th>
+                            <?php else : ?>
+                                <th scope="col">Item Code</th>
+                                <th scope="col">Description</th>
+                                <th scope="col" class="text-end">Quantity</th>
+                                <th scope="col">Unit</th>
+                                <th scope="col" class="text-end">Unit Price</th>
+                                <th scope="col" class="text-end">Discount %</th>
+                                <th scope="col" class="text-end">Net Price</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($lineItems)) : ?>
                             <tr>
-                                <td colspan="12" class="text-secondary">No line items were captured for this purchase order version.</td>
+                                <td colspan="<?php echo $lineColumnCount; ?>" class="text-secondary">No line items were captured for this purchase order version.</td>
                             </tr>
                         <?php else : ?>
                             <?php foreach ($lineItems as $line) : ?>
                                 <tr>
                                     <td class="fw-semibold"><?php echo e((string) ($line['line_no'] ?? '')); ?></td>
-                                    <td><?php echo e($line['line_type'] ?? ''); ?></td>
-                                    <td><?php echo e($line['line_date'] ?? ''); ?></td>
-                                    <td><?php echo e($line['item_code'] ?? ''); ?></td>
-                                    <td><?php echo e($line['description'] ?? ''); ?></td>
-                                    <td class="text-end"><?php echo number_format((float) ($line['quantity'] ?? 0), 2); ?></td>
-                                    <td><?php echo e($line['unit'] ?? ''); ?></td>
-                                    <td class="text-end"><?php echo number_format((float) ($line['unit_price'] ?? 0), 2); ?></td>
-                                    <td class="text-end"><?php echo number_format((float) ($line['net_price'] ?? 0), 2); ?></td>
-                                    <td class="text-end"><?php echo number_format((float) ($line['ex_vat_amount'] ?? 0), 2); ?></td>
-                                    <td class="text-end"><?php echo number_format((float) ($line['line_vat_amount'] ?? 0), 2); ?></td>
-                                    <td class="text-end"><?php echo number_format((float) ($line['line_total_amount'] ?? 0), 2); ?></td>
+                                    <?php if ($poType === 'transactional') : ?>
+                                        <td><?php echo e($line['line_date'] ?? ''); ?></td>
+                                        <td><?php echo e($line['description'] ?? ''); ?></td>
+                                        <td class="text-end"><?php echo number_format((float) ($line['deposit_amount'] ?? 0), 2); ?></td>
+                                        <td class="text-end"><?php echo number_format((float) ($line['ex_vat_amount'] ?? 0), 2); ?></td>
+                                        <td class="text-end"><?php echo number_format((float) ($line['line_vat_amount'] ?? 0), 2); ?></td>
+                                        <td class="text-end"><?php echo number_format((float) ($line['line_total_amount'] ?? 0), 2); ?></td>
+                                    <?php else : ?>
+                                        <td><?php echo e($line['item_code'] ?? ''); ?></td>
+                                        <td><?php echo e($line['description'] ?? ''); ?></td>
+                                        <td class="text-end"><?php echo number_format((float) ($line['quantity'] ?? 0), 2); ?></td>
+                                        <td><?php echo e($line['unit'] ?? ''); ?></td>
+                                        <td class="text-end"><?php echo number_format((float) ($line['unit_price'] ?? 0), 2); ?></td>
+                                        <td class="text-end"><?php echo number_format((float) ($line['discount_percent'] ?? 0), 2); ?></td>
+                                        <td class="text-end"><?php echo number_format((float) ($line['net_price'] ?? 0), 2); ?></td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
