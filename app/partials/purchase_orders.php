@@ -9,15 +9,16 @@ function e(string $value): string
 
 $pdo = get_db_connection();
 
-// Pull only visible order books for end-user selection; fall back to existing purchase orders if no metadata exists yet.
+$showHiddenBooks = ($_GET['show_hidden'] ?? '0') === '1';
+
+// Pull visible order books by default; include hidden ones when explicitly requested.
 $orderBooks = [];
 try {
-    $booksStmt = $pdo->query(
-        'SELECT book_code, description
-         FROM order_books
-         WHERE is_visible = 1
-         ORDER BY book_code ASC'
-    );
+    $booksQuery = $showHiddenBooks
+        ? 'SELECT book_code, description, is_visible FROM order_books ORDER BY book_code ASC'
+        : 'SELECT book_code, description, is_visible FROM order_books WHERE is_visible = 1 ORDER BY book_code ASC';
+
+    $booksStmt = $pdo->query($booksQuery);
     $orderBooks = $booksStmt->fetchAll();
 } catch (Throwable $exception) {
     // If the admin has not created the metadata table yet we still want the page to render.
@@ -37,6 +38,7 @@ if (empty($orderBooks)) {
         $orderBooks[] = [
             'book_code' => $row['book_code'],
             'description' => 'Derived from purchase_orders',
+            'is_visible' => 1,
         ];
     }
 }
@@ -47,23 +49,49 @@ $bookCodes = array_column($orderBooks, 'book_code');
 $selectedBook = $_GET['order_book'] ?? '';
 
 $orders = [];
+$itemsPerPage = 360;
+$currentPage = max(1, (int) ($_GET['page'] ?? 1));
+
+$latestPerPoSubquery = 'SELECT po_number, MAX(id) AS latest_id FROM purchase_orders GROUP BY po_number';
+
+// Count total unique purchase orders so we can paginate results cleanly.
+$countQuery =
+    "SELECT COUNT(*) AS total
+     FROM purchase_orders po
+     INNER JOIN ($latestPerPoSubquery) latest ON latest.po_number = po.po_number AND latest.latest_id = po.id";
+
+// Fetch the latest version for each purchase order number and support filtering by order book.
 $orderQuery =
-    'SELECT id, po_number, order_book, order_sheet_no, supplier_name, order_date, total_amount, created_at
-     FROM purchase_orders';
+    "SELECT po.id, po.po_number, po.order_book, po.order_sheet_no, po.supplier_name, po.order_date, po.total_amount, po.created_at
+     FROM purchase_orders po
+     INNER JOIN ($latestPerPoSubquery) latest ON latest.po_number = po.po_number AND latest.latest_id = po.id";
 
 // When a specific order book is chosen, apply the filter; otherwise show all order books.
 if ($selectedBook !== '') {
-    $orderQuery .= ' WHERE order_book = :book';
+    $orderQuery .= ' WHERE po.order_book = :book';
+    $countQuery .= ' WHERE po.order_book = :book';
 }
 
-// Default the view to PO Number ascending so users immediately see sorted results.
-$orderQuery .= ' ORDER BY po_number ASC';
+// Default the view to PO Number ascending so users immediately see sorted results and stay within the current page.
+$orderQuery .= ' ORDER BY po.po_number ASC LIMIT :limit OFFSET :offset';
 
 $ordersStmt = $pdo->prepare($orderQuery);
+$countStmt = $pdo->prepare($countQuery);
 
 if ($selectedBook !== '') {
     $ordersStmt->bindValue(':book', $selectedBook, PDO::PARAM_STR);
+    $countStmt->bindValue(':book', $selectedBook, PDO::PARAM_STR);
 }
+
+$countStmt->execute();
+$totalOrdersCount = (int) $countStmt->fetchColumn();
+
+$totalPages = max(1, (int) ceil($totalOrdersCount / $itemsPerPage));
+$currentPage = min($currentPage, $totalPages);
+$offset = ($currentPage - 1) * $itemsPerPage;
+
+$ordersStmt->bindValue(':limit', $itemsPerPage, PDO::PARAM_INT);
+$ordersStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 
 $ordersStmt->execute();
 $orders = $ordersStmt->fetchAll();
@@ -91,7 +119,13 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
                 <h3 class="h6 mb-1">Filter by order book</h3>
-                <small class="text-secondary">Only books marked visible are listed below.</small>
+                <small class="text-secondary">
+                    <?php if ($showHiddenBooks) : ?>
+                        Visible and hidden books are available in the dropdown.
+                    <?php else : ?>
+                        Only books marked visible are listed below. Use the button to add hidden books temporarily.
+                    <?php endif; ?>
+                </small>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <label for="orderBookSelect" class="form-label mb-0">Order book:</label>
@@ -102,9 +136,18 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                         <option value="" <?php echo $selectedBook === '' ? 'selected' : ''; ?>>Show all order books</option>
                         <?php foreach ($orderBooks as $book) : ?>
                             <?php
-                            $label = $book['description'] !== ''
-                                ? sprintf('%s — %s', $book['book_code'], $book['description'])
-                                : $book['book_code'];
+                            $isHidden = isset($book['is_visible']) && (int) $book['is_visible'] === 0;
+                            $labelParts = [$book['book_code']];
+
+                            if ($book['description'] !== '') {
+                                $labelParts[] = $book['description'];
+                            }
+
+                            $label = implode(' — ', $labelParts);
+
+                            if ($isHidden) {
+                                $label .= ' (hidden)';
+                            }
                             ?>
                             <option value="<?php echo e($book['book_code']); ?>" <?php echo $book['book_code'] === $selectedBook ? 'selected' : ''; ?>>
                                 <?php echo e($label); ?>
@@ -113,6 +156,17 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                     <?php endif; ?>
                 </select>
             </div>
+        </div>
+
+        <div class="mt-2">
+            <button
+                type="button"
+                id="toggleHiddenBooks"
+                class="btn btn-link btn-sm px-0"
+                data-is-showing-hidden="<?php echo $showHiddenBooks ? '1' : '0'; ?>"
+            >
+                <?php echo $showHiddenBooks ? 'Hide hidden order books' : 'Show hidden order books'; ?>
+            </button>
         </div>
     </div>
 </div>
@@ -137,7 +191,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                     autocomplete="off"
                     <?php echo empty($orders) ? 'disabled' : ''; ?>
                 >
-                <span class="badge text-bg-light border">Total orders: <?php echo count($orders); ?></span>
+                <span class="badge text-bg-light border">Total orders: <?php echo $totalOrdersCount ?? 0; ?></span>
             </div>
         </div>
 
@@ -216,6 +270,24 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                 </tbody>
             </table>
         </div>
+
+        <?php if (($totalPages ?? 1) > 1) : ?>
+            <nav class="mt-3" aria-label="Purchase orders pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">
+                        <a class="page-link pagination-link" href="#" data-page="<?php echo $currentPage - 1; ?>">Previous</a>
+                    </li>
+                    <?php for ($page = 1; $page <= $totalPages; $page++) : ?>
+                        <li class="page-item <?php echo $page === $currentPage ? 'active' : ''; ?>">
+                            <a class="page-link pagination-link" href="#" data-page="<?php echo $page; ?>"><?php echo $page; ?></a>
+                        </li>
+                    <?php endfor; ?>
+                    <li class="page-item <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>">
+                        <a class="page-link pagination-link" href="#" data-page="<?php echo $currentPage + 1; ?>">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -226,6 +298,24 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
     const selector = document.getElementById('orderBookSelect');
     const ordersTable = document.getElementById('purchaseOrdersTable');
     const supplierFilter = document.getElementById('supplierFilter');
+    const toggleHiddenBooks = document.getElementById('toggleHiddenBooks');
+    const currentShowHidden = '<?php echo $showHiddenBooks ? '1' : '0'; ?>';
+    const currentPage = Number('<?php echo $currentPage; ?>') || 1;
+
+    function buildParams(overrides = {}) {
+        const shouldShowHidden = overrides.showHidden ?? currentShowHidden === '1';
+        const params = new URLSearchParams({
+            view: 'purchase_orders',
+            order_book: overrides.orderBook ?? (selector ? selector.value : ''),
+            page: String(overrides.page ?? currentPage),
+        });
+
+        if (shouldShowHidden) {
+            params.set('show_hidden', '1');
+        }
+
+        return params;
+    }
 
     if (!contentArea) {
         return;
@@ -248,6 +338,26 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
         });
     }
 
+    async function fetchAndReplace(params, errorMessage) {
+        try {
+            const response = await fetch(`content.php?${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+
+            if (!response.ok) {
+                throw new Error(errorMessage);
+            }
+
+            const html = await response.text();
+            replaceContentWithScripts(html);
+        } catch (error) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger mt-3';
+            alert.textContent = errorMessage;
+            contentArea.prepend(alert);
+        }
+    }
+
     // Use delegated change handling so the order book dropdown continues to trigger reloads even after replacement.
     if (selector && contentArea.dataset.orderBookDelegateBound !== 'true') {
         contentArea.dataset.orderBookDelegateBound = 'true';
@@ -259,25 +369,51 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                 return;
             }
 
-            const params = new URLSearchParams({ view: 'purchase_orders', order_book: target.value });
+            const params = buildParams({ orderBook: target.value, page: 1 });
 
-            try {
-                const response = await fetch(`content.php?${params.toString()}`, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                });
+            await fetchAndReplace(params, 'There was a problem loading the selected order book. Please try again.');
+        });
+    }
 
-                if (!response.ok) {
-                    throw new Error('Unable to load order book');
-                }
+    if (toggleHiddenBooks && contentArea) {
+        toggleHiddenBooks.addEventListener('click', async () => {
+            const isShowingHidden = toggleHiddenBooks.dataset.isShowingHidden === '1';
+            const params = buildParams({
+                orderBook: selector ? selector.value : '',
+                showHidden: !isShowingHidden,
+                page: 1,
+            });
 
-                const html = await response.text();
-                replaceContentWithScripts(html);
-            } catch (error) {
-                const alert = document.createElement('div');
-                alert.className = 'alert alert-danger mt-3';
-                alert.textContent = 'There was a problem loading the selected order book. Please try again.';
-                contentArea.prepend(alert);
+            await fetchAndReplace(params, 'There was a problem loading hidden order books. Please try again.');
+        });
+    }
+
+    if (contentArea && contentArea.dataset.paginationDelegateBound !== 'true') {
+        contentArea.dataset.paginationDelegateBound = 'true';
+
+        contentArea.addEventListener('click', async (event) => {
+            const target = event.target;
+
+            if (!(target instanceof HTMLElement) || !target.classList.contains('pagination-link')) {
+                return;
             }
+
+            event.preventDefault();
+
+            const parent = target.closest('.page-item');
+            const requestedPage = Number(target.dataset.page);
+
+            if (parent && parent.classList.contains('disabled')) {
+                return;
+            }
+
+            if (!Number.isInteger(requestedPage) || requestedPage < 1) {
+                return;
+            }
+
+            const params = buildParams({ page: requestedPage });
+
+            await fetchAndReplace(params, 'There was a problem loading that page of orders. Please try again.');
         });
     }
 
