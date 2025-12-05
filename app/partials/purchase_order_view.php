@@ -29,6 +29,9 @@ $previousPo = $viewData['previousPo'];
 $nextPo = $viewData['nextPo'];
 $sharedParams = $viewData['sharedParams'];
 $returnParams = $viewData['returnParams'];
+$returnViewLabel = ($returnParams['view'] ?? 'purchase_orders') === 'line_entry_enquiry'
+    ? 'Back to Line Entry Enquiry'
+    : 'Back to Purchase Orders';
 
 // Build query strings for navigation so AJAX links can pass parameters via data-params and fall back to href navigation.
 $returnQuery = build_query($returnParams);
@@ -47,10 +50,10 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
             <a
                 class="btn btn-outline-secondary"
                 href="<?php echo $returnHref; ?>"
-                data-view="purchase_orders"
+                data-view="<?php echo e($returnParams['view'] ?? 'purchase_orders'); ?>"
                 data-params="<?php echo e($returnQuery); ?>"
             >
-                &larr; Back to Purchase Orders
+                &larr; <?php echo e($returnViewLabel); ?>
             </a>
             <?php if ($previousQuery !== '') : ?>
                 <a
