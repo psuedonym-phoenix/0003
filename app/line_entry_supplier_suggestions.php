@@ -15,15 +15,41 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $description = trim($_GET['description'] ?? '');
 $orderBook = trim($_GET['order_book'] ?? '');
 $poNumber = trim($_GET['po_number'] ?? '');
+$loadAllSuppliers = isset($_GET['all_suppliers']) && $_GET['all_suppliers'] === '1';
 
-// Avoid expensive scans unless the user has provided a meaningful description fragment.
-if ($description === '' || mb_strlen($description) < 2) {
-    echo json_encode(['suggestions' => []]);
-    exit;
-}
+$hasMeaningfulDescription = mb_strlen($description) >= 2;
+$hasFilters = $hasMeaningfulDescription || $orderBook !== '' || $poNumber !== '';
 
 try {
     $pdo = get_db_connection();
+
+    // When no filters are active, return the full supplier list to help pre-populate the field.
+    if ($loadAllSuppliers && !$hasFilters) {
+        $allSuppliersSql = '
+            SELECT supplier_name
+            FROM suppliers
+            WHERE supplier_name IS NOT NULL
+              AND supplier_name != ""
+            ORDER BY supplier_name ASC
+        ';
+
+        $allSuppliersStmt = $pdo->query($allSuppliersSql);
+
+        $allSuggestions = [];
+
+        while ($row = $allSuppliersStmt->fetch(PDO::FETCH_ASSOC)) {
+            $allSuggestions[] = $row['supplier_name'];
+        }
+
+        echo json_encode(['suggestions' => $allSuggestions]);
+        exit;
+    }
+
+    // Avoid expensive scans unless the user has provided a meaningful description fragment.
+    if (!$hasMeaningfulDescription) {
+        echo json_encode(['suggestions' => []]);
+        exit;
+    }
 
     $conditions = ['pol.description LIKE :description'];
     $params = [

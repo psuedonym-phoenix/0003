@@ -532,21 +532,31 @@ if ($hasFilters) {
             }
 
             const descriptionQuery = searchInput.value.trim();
+            const hasMeaningfulDescription = descriptionQuery.length >= 2;
+            const hasOrderBookFilter = Boolean(orderBookSelect && orderBookSelect.value !== '');
+            const hasPoNumberFilter = Boolean(poNumberInput && poNumberInput.value.trim() !== '');
+            const shouldLoadAllSuppliers = !hasMeaningfulDescription && !hasOrderBookFilter && !hasPoNumberFilter;
 
-            if (descriptionQuery.length < 2) {
+            if (!hasMeaningfulDescription && !shouldLoadAllSuppliers) {
                 clearSupplierSuggestions();
                 return;
             }
 
             const params = new URLSearchParams();
-            params.set('description', descriptionQuery);
+            if (hasMeaningfulDescription) {
+                params.set('description', descriptionQuery);
+            }
 
-            if (orderBookSelect && orderBookSelect.value !== '') {
+            if (hasOrderBookFilter) {
                 params.set('order_book', orderBookSelect.value);
             }
 
-            if (poNumberInput && poNumberInput.value.trim() !== '') {
+            if (hasPoNumberFilter) {
                 params.set('po_number', poNumberInput.value.trim());
+            }
+
+            if (shouldLoadAllSuppliers) {
+                params.set('all_suppliers', '1');
             }
 
             if (suggestionAbortController) {
