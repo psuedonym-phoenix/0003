@@ -27,3 +27,4 @@
 - 2025-12-17: Added a line entry enquiry view to search purchase order line descriptions directly from the sidebar.
 - 2025-12-18: Reordered the changelog to append new entries at the bottom to preserve log-style history.
 - 2025-12-19: Added PO number, order book, order date, and description filters plus sortable headers to the line entry enquiry table.
+- 2025-12-20: Added a compact filter bar under the line entry enquiry header with fuzzy PO, order book, supplier, and description searches plus a clear filters action.
