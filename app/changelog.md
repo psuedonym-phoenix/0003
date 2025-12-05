@@ -23,3 +23,4 @@
 - 2025-12-13: Removed the sticky purchase order header and enabled supplier filtering across all books without pagination when no book is selected.
 - 2025-12-14: Clearing supplier filters when switching order books so each selection starts unfiltered.
 - 2025-12-15: Added a purchase order detail page with navigation, a View action on purchase orders, and deep links that preserve order book filters when returning.
+- 2025-12-16: Moved purchase order Actions before Uploaded in the listing and added type-aware layouts for viewing standard vs transactional purchase orders.
