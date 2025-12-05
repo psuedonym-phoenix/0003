@@ -26,3 +26,4 @@
 - 2025-12-16: Moved purchase order Actions before Uploaded in the listing and added type-aware layouts for viewing standard vs transactional purchase orders.
 - 2025-12-17: Added a line entry enquiry view to search purchase order line descriptions directly from the sidebar.
 - 2025-12-18: Reordered the changelog to append new entries at the bottom to preserve log-style history.
+- 2025-12-19: Added PO number, order book, order date, and description filters plus sortable headers to the line entry enquiry table.
