@@ -14,3 +14,4 @@
 - 2025-02-12: Simplified purchase orders view to use only visible order books via dropdown while removing the in-page order book listing.
 - 2025-12-05: Rehydrated purchase order partial scripts and delegated the order book change handler to keep reloads working after AJAX swaps.
 - 2025-12-06: Added client-side purchase order sorting and supplier filtering with unobtrusive JavaScript.
+- 2025-12-07: Added show-all order book option, supplier autocomplete, consistent sortable headers, and default PO Number sorting in purchase orders view.

@@ -44,19 +44,34 @@ if (empty($orderBooks)) {
 $bookCodes = array_column($orderBooks, 'book_code');
 
 // Determine which book is selected for the detailed order list.
-$selectedBook = $_GET['order_book'] ?? ($bookCodes[0] ?? '');
+$selectedBook = $_GET['order_book'] ?? '';
 
 $orders = [];
+$orderQuery =
+    'SELECT id, po_number, order_book, order_sheet_no, supplier_name, order_date, total_amount, created_at
+     FROM purchase_orders';
+
+// When a specific order book is chosen, apply the filter; otherwise show all order books.
 if ($selectedBook !== '') {
-    $ordersStmt = $pdo->prepare(
-        'SELECT id, po_number, order_book, order_sheet_no, supplier_name, order_date, total_amount, created_at
-         FROM purchase_orders
-         WHERE order_book = :book
-         ORDER BY created_at DESC'
-    );
-    $ordersStmt->execute([':book' => $selectedBook]);
-    $orders = $ordersStmt->fetchAll();
+    $orderQuery .= ' WHERE order_book = :book';
 }
+
+// Default the view to PO Number ascending so users immediately see sorted results.
+$orderQuery .= ' ORDER BY po_number ASC';
+
+$ordersStmt = $pdo->prepare($orderQuery);
+
+if ($selectedBook !== '') {
+    $ordersStmt->bindValue(':book', $selectedBook, PDO::PARAM_STR);
+}
+
+$ordersStmt->execute();
+$orders = $ordersStmt->fetchAll();
+
+// Unique supplier list supports autocomplete suggestions for filtering.
+$supplierSuggestions = array_values(array_unique(array_map(static function ($order) {
+    return $order['supplier_name'] ?? '';
+}, $orders)));
 ?>
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
@@ -84,6 +99,7 @@ if ($selectedBook !== '') {
                     <?php if (empty($bookCodes)) : ?>
                         <option value="">No visible order books available</option>
                     <?php else : ?>
+                        <option value="" <?php echo $selectedBook === '' ? 'selected' : ''; ?>>Show all order books</option>
                         <?php foreach ($orderBooks as $book) : ?>
                             <?php
                             $label = $book['description'] !== ''
@@ -105,8 +121,10 @@ if ($selectedBook !== '') {
     <div class="card-body">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
             <div>
-                <h3 class="h6 mb-1">Orders in book: <?php echo $selectedBook !== '' ? e($selectedBook) : 'None selected'; ?></h3>
-                <small class="text-secondary">Showing all purchase orders that belong to the selected order book.</small>
+                <h3 class="h6 mb-1">
+                    Orders in book: <?php echo $selectedBook !== '' ? e($selectedBook) : 'All order books'; ?>
+                </h3>
+                <small class="text-secondary">Showing purchase orders for the selected order book, or all when none is chosen.</small>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <label for="supplierFilter" class="form-label mb-0">Supplier filter:</label>
@@ -115,30 +133,58 @@ if ($selectedBook !== '') {
                     id="supplierFilter"
                     class="form-control form-control-sm"
                     placeholder="Type to filter suppliers"
+                    list="supplierSuggestions"
+                    autocomplete="off"
                     <?php echo empty($orders) ? 'disabled' : ''; ?>
                 >
                 <span class="badge text-bg-light border">Total orders: <?php echo count($orders); ?></span>
             </div>
         </div>
 
+        <?php if (!empty($supplierSuggestions)) : ?>
+            <datalist id="supplierSuggestions">
+                <?php foreach ($supplierSuggestions as $supplierName) : ?>
+                    <?php if ($supplierName !== '') : ?>
+                        <option value="<?php echo e($supplierName); ?>">
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </datalist>
+        <?php endif; ?>
+
+        <style>
+            .sortable-header {
+                background: none;
+                border: none;
+                padding: 0;
+                font: inherit;
+                color: inherit;
+                cursor: pointer;
+            }
+
+            .sortable-header:focus-visible {
+                outline: 2px solid var(--bs-primary);
+                outline-offset: 2px;
+            }
+        </style>
+
         <div class="table-responsive">
             <table id="purchaseOrdersTable" class="table table-sm align-middle mb-0">
                 <thead class="table-light">
                     <tr>
                         <th scope="col">
-                            <button type="button" class="btn btn-link p-0 text-decoration-none" data-sort-key="po_number">
+                            <button type="button" class="sortable-header" data-sort-key="po_number">
                                 PO Number
                             </button>
                         </th>
                         <th scope="col">Order Sheet</th>
                         <th scope="col">Supplier</th>
                         <th scope="col">
-                            <button type="button" class="btn btn-link p-0 text-decoration-none" data-sort-key="order_date" data-sort-type="date">
+                            <button type="button" class="sortable-header" data-sort-key="order_date" data-sort-type="date">
                                 Order Date
                             </button>
                         </th>
                         <th scope="col" class="text-end">
-                            <button type="button" class="btn btn-link p-0 text-decoration-none" data-sort-key="total_amount" data-sort-type="number">
+                            <button type="button" class="sortable-header text-end" data-sort-key="total_amount" data-sort-type="number">
                                 Total Amount
                             </button>
                         </th>
@@ -146,13 +192,9 @@ if ($selectedBook !== '') {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if ($selectedBook === '') : ?>
+                    <?php if (empty($orders)) : ?>
                         <tr>
-                            <td colspan="6" class="text-secondary">Select an order book to view its purchase orders.</td>
-                        </tr>
-                    <?php elseif (empty($orders)) : ?>
-                        <tr>
-                            <td colspan="6" class="text-secondary">No purchase orders were found for this order book.</td>
+                            <td colspan="6" class="text-secondary">No purchase orders were found for the current selection.</td>
                         </tr>
                     <?php else : ?>
                         <?php foreach ($orders as $order) : ?>
@@ -253,7 +295,7 @@ if ($selectedBook !== '') {
     }
 
     let filteredRows = [...orderRows];
-    let currentSort = { key: null, type: 'string', direction: 'asc' };
+    let currentSort = { key: 'po_number', type: 'string', direction: 'asc' };
 
     function toCamelCase(key) {
         return key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -345,6 +387,9 @@ if ($selectedBook !== '') {
             applySort(key, type, direction);
         });
     });
+
+    // Apply the default ascending PO Number sort on initial load.
+    applySort(currentSort.key, currentSort.type, currentSort.direction);
 
     if (supplierFilter) {
         supplierFilter.addEventListener('input', (event) => {
