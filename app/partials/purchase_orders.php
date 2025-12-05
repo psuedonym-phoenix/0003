@@ -220,15 +220,27 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                 outline-offset: 2px;
             }
 
-            #purchaseOrdersTable thead.sticky-table-header th {
+            .purchase-orders-table-wrapper {
+                position: relative;
+            }
+
+            .purchase-orders-table-wrapper thead.sticky-table-header {
                 position: sticky;
                 top: var(--table-header-offset, 0);
                 z-index: 6;
                 background-color: var(--bs-table-bg, #fff);
             }
+
+            #purchaseOrdersTable thead.sticky-table-header th {
+                position: sticky;
+                top: var(--table-header-offset, 0);
+                z-index: 7;
+                background-color: var(--bs-table-bg, #fff);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
         </style>
 
-        <div class="table-responsive">
+        <div class="table-responsive purchase-orders-table-wrapper">
             <table id="purchaseOrdersTable" class="table table-sm align-middle mb-0">
                 <thead class="table-light sticky-table-header">
                     <tr>
@@ -311,6 +323,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
     const contentArea = document.getElementById('contentArea');
     const selector = document.getElementById('orderBookSelect');
     const ordersTable = document.getElementById('purchaseOrdersTable');
+    const ordersTableWrapper = document.querySelector('.purchase-orders-table-wrapper');
     const supplierFilter = document.getElementById('supplierFilter');
     const toggleHiddenBooks = document.getElementById('toggleHiddenBooks');
     const currentShowHidden = '<?php echo $showHiddenBooks ? '1' : '0'; ?>';
@@ -319,9 +332,14 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
     function updateStickyHeaderOffset() {
         const headerBar = document.querySelector('.app-header');
         const headerHeight = headerBar ? headerBar.getBoundingClientRect().height : 0;
+        const offset = headerHeight + 8;
 
         // Provide a small gap so the sticky table header does not sit flush against the main header bar.
-        document.documentElement.style.setProperty('--table-header-offset', `${headerHeight + 8}px`);
+        if (ordersTableWrapper) {
+            ordersTableWrapper.style.setProperty('--table-header-offset', `${offset}px`);
+        } else {
+            document.documentElement.style.setProperty('--table-header-offset', `${offset}px`);
+        }
     }
 
     updateStickyHeaderOffset();

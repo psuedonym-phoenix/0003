@@ -19,3 +19,4 @@
 - 2025-12-09: Limited purchase order listings to the latest version per PO Number, added pagination capped at 360 orders per page, and carried filters through page navigation.
 - 2025-12-10: Hid the Order Sheet column from purchase orders and made the table header stick below the main header when scrolling.
 - 2025-12-11: Enabled sorting on PO Number, Supplier, Order Date, Total Amount, and Uploaded columns in purchase orders.
+- 2025-12-12: Stabilised the sticky purchase orders table header with scoped offsets so it stays clear of the main header and table rows.
