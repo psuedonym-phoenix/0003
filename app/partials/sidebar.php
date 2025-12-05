@@ -13,6 +13,7 @@
 <nav class="nav flex-column gap-1" id="sidebarNav">
     <a class="nav-link" href="#" data-view="dashboard">Dashboard</a>
     <a class="nav-link" href="#" data-view="suppliers">Suppliers</a>
+    <a class="nav-link" href="#" data-view="order_books">Order Books</a>
     <a class="nav-link" href="#" data-view="purchase_orders">Purchase Orders</a>
 </nav>
 <div class="mt-4 pt-3 border-top">
