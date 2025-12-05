@@ -40,6 +40,16 @@ require_authentication();
             const contentArea = document.getElementById('contentArea');
             const navLinks = Array.from(document.querySelectorAll('[data-view]'));
 
+            function getParamsFromElement(element) {
+                const rawParams = element?.dataset?.params || '';
+
+                try {
+                    return new URLSearchParams(rawParams);
+                } catch (error) {
+                    return new URLSearchParams();
+                }
+            }
+
             function applyTheme(theme) {
                 root.setAttribute('data-bs-theme', theme);
             }
@@ -107,7 +117,8 @@ require_authentication();
                 const view = event.currentTarget.getAttribute('data-view');
                 if (view) {
                     event.preventDefault();
-                    loadView(view);
+                    const params = getParamsFromElement(event.currentTarget);
+                    loadView(view, params);
                 }
             }
 
@@ -129,7 +140,8 @@ require_authentication();
                 const target = event.target;
                 if (target instanceof HTMLElement && target.dataset.view) {
                     event.preventDefault();
-                    loadView(target.dataset.view);
+                    const params = getParamsFromElement(target);
+                    loadView(target.dataset.view, params);
                 }
             });
 
