@@ -410,7 +410,12 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                 return;
             }
 
-            const params = buildParams({ orderBook: target.value, page: 1 });
+            if (supplierFilter) {
+                // Reset supplier filtering when switching books so the next view starts unfiltered.
+                supplierFilter.value = '';
+            }
+
+            const params = buildParams({ orderBook: target.value, page: 1, supplier: '' });
 
             await fetchAndReplace(params, 'There was a problem loading the selected order book. Please try again.');
         });
