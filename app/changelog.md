@@ -36,3 +36,4 @@
 - 2025-12-26: Preserved line entry enquiry filters when viewing a purchase order so the back action returns to the same search.
 - 2025-12-27: Split multi-word description searches in line entry enquiry so every term must be present, enabling flexible matches across the description text.
 - 2025-12-28: Added quantity, unit, and conditional unit price/amount columns to the line entry enquiry results for standard and transactional lines.
+- 2025-05-14: Added a dedicated unit price column to the line entry enquiry while retaining the transactional line display rules.
