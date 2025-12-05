@@ -55,6 +55,7 @@ if (empty($orderBooks)) {
 
 $selectedBook = trim($_GET['order_book'] ?? '');
 $poNumber = trim($_GET['po_number'] ?? '');
+$supplierQuery = trim($_GET['supplier'] ?? '');
 $searchQuery = trim($_GET['query'] ?? '');
 $orderDateFrom = trim($_GET['order_date_from'] ?? '');
 $orderDateTo = trim($_GET['order_date_to'] ?? '');
@@ -65,6 +66,7 @@ $currentPage = max(1, (int) ($_GET['page'] ?? 1));
 $hasFilters = $searchQuery !== ''
     || $selectedBook !== ''
     || $poNumber !== ''
+    || $supplierQuery !== ''
     || $orderDateFrom !== ''
     || $orderDateTo !== '';
 
@@ -124,6 +126,10 @@ if ($hasFilters) {
         $conditions[] = 'po.po_number LIKE :poNumber';
     }
 
+    if ($supplierQuery !== '') {
+        $conditions[] = 'po.supplier_name LIKE :supplier';
+    }
+
     if ($orderDateFrom !== '') {
         $conditions[] = 'po.order_date >= :orderDateFrom';
     }
@@ -178,6 +184,12 @@ if ($hasFilters) {
         $queryStmt->bindValue(':poNumber', $poNumberTerm, PDO::PARAM_STR);
     }
 
+    if ($supplierQuery !== '') {
+        $supplierTerm = '%' . $supplierQuery . '%';
+        $countStmt->bindValue(':supplier', $supplierTerm, PDO::PARAM_STR);
+        $queryStmt->bindValue(':supplier', $supplierTerm, PDO::PARAM_STR);
+    }
+
     if ($orderDateFrom !== '') {
         $countStmt->bindValue(':orderDateFrom', $orderDateFrom, PDO::PARAM_STR);
         $queryStmt->bindValue(':orderDateFrom', $orderDateFrom, PDO::PARAM_STR);
@@ -210,14 +222,100 @@ if ($hasFilters) {
     <input type="hidden" id="lineSortDir" name="sort_dir" value="<?php echo e($sortDirection); ?>">
 
     <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body d-flex justify-content-between align-items-start flex-wrap gap-3">
-            <div>
-                <h2 class="h5 mb-1">Line entry enquiry</h2>
-                <small class="text-secondary">Filter by PO number, order book, order date, or description. Click a column heading to sort.</small>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h2 class="h5 mb-1">Line entry enquiry</h2>
+                    <small class="text-secondary">Filter by PO number, order book, supplier, or description. Click a column heading to sort.</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Apply filters</button>
+                    <button type="button" id="lineResetFilters" class="btn btn-outline-secondary">Clear filters</button>
+                </div>
             </div>
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Apply filters</button>
-                <button type="button" id="lineResetFilters" class="btn btn-outline-secondary">Reset</button>
+
+            <div class="bg-light border rounded-3 p-3 mt-3">
+                <div class="row g-3">
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label mb-1" for="linePoNumber">PO Number</label>
+                        <input
+                            type="search"
+                            class="form-control form-control-sm"
+                            id="linePoNumber"
+                            name="po_number"
+                            placeholder="Contains"
+                            value="<?php echo e($poNumber); ?>"
+                        >
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label mb-1" for="lineOrderBook">Order book</label>
+                        <select id="lineOrderBook" name="order_book" class="form-select form-select-sm">
+                            <option value="" <?php echo $selectedBook === '' ? 'selected' : ''; ?>>All</option>
+                            <?php foreach ($orderBooks as $book) : ?>
+                                <?php
+                                $labelParts = [$book['book_code']];
+
+                                if (($book['description'] ?? '') !== '') {
+                                    $labelParts[] = $book['description'];
+                                }
+
+                                $label = implode(' — ', $labelParts);
+                                ?>
+                                <option value="<?php echo e($book['book_code']); ?>" <?php echo $book['book_code'] === $selectedBook ? 'selected' : ''; ?>>
+                                    <?php echo e($label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-3">
+                        <label class="form-label mb-1" for="lineSupplier">Supplier</label>
+                        <input
+                            type="search"
+                            class="form-control form-control-sm"
+                            id="lineSupplier"
+                            name="supplier"
+                            placeholder="Contains"
+                            value="<?php echo e($supplierQuery); ?>"
+                        >
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-3">
+                        <label class="form-label mb-1" for="lineSearch">Description</label>
+                        <input
+                            type="search"
+                            id="lineSearch"
+                            name="query"
+                            class="form-control form-control-sm"
+                            placeholder="Contains"
+                            value="<?php echo e($searchQuery); ?>"
+                        >
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-2">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12">
+                                <label class="form-label mb-1" for="lineOrderDateFrom">Order date from</label>
+                                <input
+                                    type="date"
+                                    class="form-control form-control-sm"
+                                    id="lineOrderDateFrom"
+                                    name="order_date_from"
+                                    value="<?php echo e($orderDateFrom); ?>"
+                                    placeholder="From"
+                                >
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label mb-1" for="lineOrderDateTo">Order date to</label>
+                                <input
+                                    type="date"
+                                    class="form-control form-control-sm"
+                                    id="lineOrderDateTo"
+                                    name="order_date_to"
+                                    value="<?php echo e($orderDateTo); ?>"
+                                    placeholder="To"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -269,85 +367,6 @@ if ($hasFilters) {
                                 </th>
                             <?php endforeach; ?>
                             <th scope="col" class="text-end">Actions</th>
-                        </tr>
-                        <tr class="align-middle">
-                            <th>
-                                <label class="visually-hidden" for="linePoNumber">PO Number</label>
-                                <input
-                                    type="search"
-                                    class="form-control form-control-sm"
-                                    id="linePoNumber"
-                                    name="po_number"
-                                    placeholder="Contains"
-                                    value="<?php echo e($poNumber); ?>"
-                                >
-                            </th>
-                            <th>
-                                <label class="visually-hidden" for="lineOrderBook">Order book</label>
-                                <select id="lineOrderBook" name="order_book" class="form-select form-select-sm">
-                                    <option value="" <?php echo $selectedBook === '' ? 'selected' : ''; ?>>All</option>
-                                    <?php foreach ($orderBooks as $book) : ?>
-                                        <?php
-                                        $labelParts = [$book['book_code']];
-
-                                        if (($book['description'] ?? '') !== '') {
-                                            $labelParts[] = $book['description'];
-                                        }
-
-                                        $label = implode(' — ', $labelParts);
-                                        ?>
-                                        <option value="<?php echo e($book['book_code']); ?>" <?php echo $book['book_code'] === $selectedBook ? 'selected' : ''; ?>>
-                                            <?php echo e($label); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </th>
-                            <th>
-                                <span class="text-secondary small">—</span>
-                            </th>
-                            <th>
-                                <div class="row g-1">
-                                    <div class="col-12">
-                                        <label class="visually-hidden" for="lineOrderDateFrom">Order date from</label>
-                                        <input
-                                            type="date"
-                                            class="form-control form-control-sm"
-                                            id="lineOrderDateFrom"
-                                            name="order_date_from"
-                                            value="<?php echo e($orderDateFrom); ?>"
-                                            placeholder="From"
-                                        >
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="visually-hidden" for="lineOrderDateTo">Order date to</label>
-                                        <input
-                                            type="date"
-                                            class="form-control form-control-sm"
-                                            id="lineOrderDateTo"
-                                            name="order_date_to"
-                                            value="<?php echo e($orderDateTo); ?>"
-                                            placeholder="To"
-                                        >
-                                    </div>
-                                </div>
-                            </th>
-                            <th>
-                                <span class="text-secondary small">—</span>
-                            </th>
-                            <th>
-                                <label class="visually-hidden" for="lineSearch">Description contains</label>
-                                <input
-                                    type="search"
-                                    id="lineSearch"
-                                    name="query"
-                                    class="form-control form-control-sm"
-                                    placeholder="Contains"
-                                    value="<?php echo e($searchQuery); ?>"
-                                >
-                            </th>
-                            <th class="text-end">
-                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -418,6 +437,7 @@ if ($hasFilters) {
         const contentArea = document.getElementById('contentArea');
         const form = document.getElementById('lineEnquiryForm');
         const searchInput = document.getElementById('lineSearch');
+        const supplierInput = document.getElementById('lineSupplier');
         const poNumberInput = document.getElementById('linePoNumber');
         const orderBookSelect = document.getElementById('lineOrderBook');
         const orderDateFromInput = document.getElementById('lineOrderDateFrom');
@@ -461,6 +481,10 @@ if ($hasFilters) {
 
             if (orderBookSelect && orderBookSelect.value !== '') {
                 params.set('order_book', orderBookSelect.value);
+            }
+
+            if (supplierInput && supplierInput.value.trim() !== '') {
+                params.set('supplier', supplierInput.value.trim());
             }
 
             if (orderDateFromInput && orderDateFromInput.value !== '') {
@@ -557,6 +581,10 @@ if ($hasFilters) {
 
                 if (orderBookSelect) {
                     orderBookSelect.value = '';
+                }
+
+                if (supplierInput) {
+                    supplierInput.value = '';
                 }
 
                 if (orderDateFromInput) {
