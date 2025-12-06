@@ -85,6 +85,8 @@ function fetch_purchase_order_view(array $input): array
         $purchaseOrder['vat_amount'] = null;
     }
 
+    $vatPercent = (float) ($purchaseOrder['vat_percent'] ?? 0);
+
     $linesStmt = $pdo->prepare(
         'SELECT * FROM purchase_order_lines WHERE purchase_order_id = :purchase_order_id ORDER BY line_no ASC, id ASC'
     );
@@ -198,7 +200,7 @@ function fetch_purchase_order_view(array $input): array
         'lineItems' => $lineItems,
         'poType' => $poType,
         'lineColumnCount' => $lineColumnCount,
-        'lineSummary' => calculate_line_summary($lineItems, $poType),
+        'lineSummary' => calculate_line_summary($lineItems, $poType, $vatPercent),
         'previousPo' => $previousPo,
         'nextPo' => $nextPo,
         'sharedParams' => $sharedParams,
@@ -210,18 +212,27 @@ function fetch_purchase_order_view(array $input): array
 /**
  * Provide a quick summary of the line items for header display.
  * We explicitly choose the numeric column based on the PO type so the roll-up
- * mirrors the running total shown in the table below (net price vs line total).
+ * mirrors the running total shown in the table below (net price vs line total)
+ * and applies VAT to standard lines when the VATable flag allows it.
  */
-function calculate_line_summary(array $lineItems, string $poType): array
+function calculate_line_summary(array $lineItems, string $poType, float $vatPercent): array
 {
     $lineSum = 0.0;
+    $vatRate = max(0.0, $vatPercent) / 100;
 
     foreach ($lineItems as $line) {
-        $lineValue = $poType === 'transactional'
-            ? (float) ($line['line_total_amount'] ?? 0)
-            : (float) ($line['net_price'] ?? 0);
+        if ($poType === 'transactional') {
+            // Transactional rows already include VAT in the stored line total.
+            $lineSum += (float) ($line['line_total_amount'] ?? 0);
+            continue;
+        }
 
-        $lineSum += $lineValue;
+        $lineNet = (float) ($line['net_price'] ?? 0);
+        // If the VATable flag is missing, default to applying VAT using the PO VAT%.
+        $lineIsVatable = !isset($line['is_vatable']) || (int) $line['is_vatable'] === 1;
+        $lineVat = $lineIsVatable ? ($lineNet * $vatRate) : 0.0;
+
+        $lineSum += $lineNet + $lineVat;
     }
 
     return [
