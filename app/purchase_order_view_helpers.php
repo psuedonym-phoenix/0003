@@ -218,7 +218,7 @@ function fetch_purchase_order_view(array $input): array
 function calculate_line_summary(array $lineItems, string $poType, float $vatPercent): array
 {
     $lineSum = 0.0;
-    $vatRate = max(0.0, $vatPercent) / 100;
+    $vatRate = max(0.0, $vatPercent) ;
 
     foreach ($lineItems as $line) {
         if ($poType === 'transactional') {
