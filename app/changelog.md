@@ -47,3 +47,4 @@ l view.
 - 2025-12-06: Adjusted purchase order financial summary to show exclusive/inclusive amounts and align total with calculated line values.
 - 2025-05-21: Reordered purchase order amounts so exclusive totals precede VAT, pulled the exclusive figure from subtotal, and set total amount to the calculated line sum.
 - 2025-05-22: Displayed the VATable flag for each purchase order line with a default tick when VAT applies at the purchase order level.
+- 2025-05-23: Calculated Total Amount (Lines) by adding VAT to standard line net prices when the VATable flag allows it.
