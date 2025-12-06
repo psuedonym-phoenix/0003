@@ -40,3 +40,6 @@
 - 2025-05-15: Updated the line entry enquiry amount column to show net price for standard lines and ex-VAT amount for transaction lines.
 - 2025-05-16: Corrected the line entry enquiry unit price column to show the unit price for standard lines instead of the net price.
 - 2025-05-17: Exposed VAT percentage, exclusive/inclusive totals, and reference on purchase order views and added running totals for line items.
+- 2025-05-18: Added a calculated lines total to the purchase order header derived from the displayed line items.
+- 2025-05-19: Displayed every purchase order header field from the database alongside the calculated line total in the PO detai
+l view.

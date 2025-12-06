@@ -192,10 +192,34 @@ function fetch_purchase_order_view(array $input): array
         'lineItems' => $lineItems,
         'poType' => $poType,
         'lineColumnCount' => $lineColumnCount,
+        'lineSummary' => calculate_line_summary($lineItems, $poType),
         'previousPo' => $previousPo,
         'nextPo' => $nextPo,
         'sharedParams' => $sharedParams,
         'returnParams' => $returnParams,
         'status' => 200,
+    ];
+}
+
+/**
+ * Provide a quick summary of the line items for header display.
+ * We explicitly choose the numeric column based on the PO type so the roll-up
+ * mirrors the running total shown in the table below (net price vs line total).
+ */
+function calculate_line_summary(array $lineItems, string $poType): array
+{
+    $lineSum = 0.0;
+
+    foreach ($lineItems as $line) {
+        $lineValue = $poType === 'transactional'
+            ? (float) ($line['line_total_amount'] ?? 0)
+            : (float) ($line['net_price'] ?? 0);
+
+        $lineSum += $lineValue;
+    }
+
+    return [
+        'count' => count($lineItems),
+        'sum' => $lineSum,
     ];
 }
