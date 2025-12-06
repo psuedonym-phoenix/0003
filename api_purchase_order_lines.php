@@ -1,5 +1,7 @@
 <?php
 // api_purchase_order_lines.php
+require_once __DIR__ . '/app/db.php';
+require_once __DIR__ . '/app/config/api_key_file.php';
 header('Content-Type: application/json');
 
 // 1) Only POST allowed
@@ -20,9 +22,7 @@ if (!is_array($data)) {
 }
 
 // 3) API key
-const API_KEY = '%h68zOewi6lqsb7aaB4!VW4bF5^fsyGCGv%mGI6QSaD5!u0FDLjLp82MIQ61VO4J';  // <-- MUST match the "api_key" you're sending
-
-if (!isset($data['api_key']) || $data['api_key'] !== API_KEY) {
+if (!isset($data['api_key']) || $data['api_key'] !== EEMS_API_KEY) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Forbidden']);
     exit;
@@ -49,18 +49,8 @@ if (empty($lines)) {
     exit;
 }
 
-// 5) DB connection
-$dbHost = 'cp53.domains.co.za';
-$dbName = 'filiades_eems';
-$dbUser = 'filiades_eemsdbuser';
-$dbPass = 'hV&2w6JfW6@Pi3q1'; // <-- real password here
-
-$dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4";
-
 try {
-    $pdo = new PDO($dsn, $dbUser, $dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    $pdo = get_db_connection();
 
     // 6) Supplier lookup
     $stmt = $pdo->prepare("
