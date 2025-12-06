@@ -79,6 +79,12 @@ function fetch_purchase_order_view(array $input): array
         ];
     }
 
+    // Ensure the VAT amount field is always available to the view, even if
+    // older records or schemas did not populate it.
+    if (!array_key_exists('vat_amount', $purchaseOrder)) {
+        $purchaseOrder['vat_amount'] = null;
+    }
+
     $linesStmt = $pdo->prepare(
         'SELECT * FROM purchase_order_lines WHERE purchase_order_id = :purchase_order_id ORDER BY line_no ASC, id ASC'
     );

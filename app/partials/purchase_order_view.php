@@ -115,8 +115,12 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                 <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['exclusive_amount'] ?? 0), 2); ?></div>
             </div>
             <div class="col-md-4">
+                <div class="text-secondary small">VAT Amount</div>
+                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['vat_amount'] ?? 0), 2); ?></div>
+            </div>
+            <div class="col-md-4">
                 <div class="text-secondary small">Inclusive Amount</div>
-                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['inclusive_amount'] ?? 0), 2); ?></div>
+                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['total_amount'] ?? 0), 2); ?></div>
             </div>
             <div class="col-md-4">
                 <div class="text-secondary small">Total Amount</div>

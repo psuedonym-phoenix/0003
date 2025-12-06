@@ -43,3 +43,4 @@
 - 2025-05-18: Added a calculated lines total to the purchase order header derived from the displayed line items.
 - 2025-05-19: Displayed every purchase order header field from the database alongside the calculated line total in the PO detai
 l view.
+- 2025-12-06: Updated purchase order view amounts to show VAT alongside exclusive and inclusive totals and ensured VAT data is passed through helpers.
