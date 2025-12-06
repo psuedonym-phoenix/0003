@@ -99,7 +99,8 @@ function fetch_purchase_order_view(array $input): array
     }
 
     $poType = $rawPoType === 'transactional' || $rawPoType === 'txn' ? 'transactional' : 'standard';
-    $lineColumnCount = $poType === 'transactional' ? 7 : 8;
+    // Line column count includes the running total column added for clarity.
+    $lineColumnCount = $poType === 'transactional' ? 8 : 9;
 
     $navigationSql = "
         SELECT po.po_number
