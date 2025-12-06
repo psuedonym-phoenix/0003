@@ -205,6 +205,7 @@ function fetch_purchase_order_view(array $input): array
         'nextPo' => $nextPo,
         'sharedParams' => $sharedParams,
         'returnParams' => $returnParams,
+        'suppliers' => fetch_supplier_options($pdo),
         'status' => 200,
     ];
 }
@@ -239,4 +240,21 @@ function calculate_line_summary(array $lineItems, string $poType, float $vatPerc
         'count' => count($lineItems),
         'sum' => $lineSum,
     ];
+}
+
+/**
+ * Load supplier names and codes to populate selection controls when editing a purchase order.
+ */
+function fetch_supplier_options(PDO $pdo): array
+{
+    try {
+        $stmt = $pdo->query(
+            'SELECT id, supplier_code, supplier_name FROM suppliers WHERE supplier_name IS NOT NULL AND supplier_name != "" ORDER BY supplier_name ASC'
+        );
+
+        return $stmt->fetchAll();
+    } catch (Throwable $exception) {
+        // If the suppliers table is unavailable we still want the purchase order view to render.
+        return [];
+    }
 }
