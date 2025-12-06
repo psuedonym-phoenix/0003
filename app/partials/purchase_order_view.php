@@ -170,6 +170,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                             <th scope="col" class="text-end">VAT Amount</th>
                             <th scope="col" class="text-end">Line Total</th>
                             <th scope="col" class="text-end">Running Total</th>
+                            <th scope="col" class="text-center">VATable</th>
                         <?php else : ?>
                             <th scope="col">Item Code</th>
                             <th scope="col">Description</th>
@@ -179,6 +180,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                             <th scope="col" class="text-end">Discount %</th>
                             <th scope="col" class="text-end">Net Price</th>
                             <th scope="col" class="text-end">Running Total</th>
+                            <th scope="col" class="text-center">VATable</th>
                         <?php endif; ?>
                     </tr>
                 </thead>
@@ -190,6 +192,12 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                     <?php else : ?>
                         <?php $runningTotal = 0.0; ?>
                         <?php foreach ($lineItems as $line) : ?>
+                            <?php
+                            // If the VAT flag is missing, default to the purchase order VAT percentage being applied.
+                            $lineIsVatable = ($line['is_vatable'] ?? null) === null
+                                ? $vatPercent > 0
+                                : ((int) $line['is_vatable'] === 1);
+                            ?>
                             <tr>
                                 <td class="fw-semibold"><?php echo e((string) ($line['line_no'] ?? '')); ?></td>
                                 <?php if ($poType === 'transactional') : ?>
@@ -201,6 +209,15 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                                     <?php $runningTotal += (float) ($line['line_total_amount'] ?? 0); ?>
                                     <td class="text-end"><?php echo number_format((float) ($line['line_total_amount'] ?? 0), 2); ?></td>
                                     <td class="text-end fw-semibold"><?php echo number_format($runningTotal, 2); ?></td>
+                                    <td class="text-center">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input position-static"
+                                            disabled
+                                            <?php echo $lineIsVatable ? 'checked' : ''; ?>
+                                            aria-label="VATable"
+                                        />
+                                    </td>
                                 <?php else : ?>
                                     <td><?php echo e($line['item_code'] ?? ''); ?></td>
                                     <td><?php echo e($line['description'] ?? ''); ?></td>
@@ -211,6 +228,15 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                                     <?php $runningTotal += (float) ($line['net_price'] ?? 0); ?>
                                     <td class="text-end"><?php echo number_format((float) ($line['net_price'] ?? 0), 2); ?></td>
                                     <td class="text-end fw-semibold"><?php echo number_format($runningTotal, 2); ?></td>
+                                    <td class="text-center">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input position-static"
+                                            disabled
+                                            <?php echo $lineIsVatable ? 'checked' : ''; ?>
+                                            aria-label="VATable"
+                                        />
+                                    </td>
                                 <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
