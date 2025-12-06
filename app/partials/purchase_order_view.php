@@ -30,6 +30,7 @@ $nextPo = $viewData['nextPo'];
 $sharedParams = $viewData['sharedParams'];
 $returnParams = $viewData['returnParams'];
 $lineSummary = $viewData['lineSummary'];
+$suppliers = $viewData['suppliers'];
 $returnViewLabel = ($returnParams['view'] ?? 'purchase_orders') === 'line_entry_enquiry'
     ? 'Back to Line Entry Enquiry'
     : 'Back to Purchase Orders';
@@ -41,6 +42,15 @@ $inclusiveAmount = (float) ($purchaseOrder['total_amount'] ?? 0);
 $vatPercent = (float) ($purchaseOrder['vat_percent'] ?? 0);
 $vatAmount = (float) ($purchaseOrder['vat_amount'] ?? 0);
 $calculatedLineTotal = (float) ($lineSummary['sum'] ?? 0);
+
+// Convert order date to an ISO value the date picker can render.
+$orderDateValue = '';
+if (!empty($purchaseOrder['order_date'])) {
+    $orderDateTimestamp = strtotime((string) $purchaseOrder['order_date']);
+    if ($orderDateTimestamp !== false) {
+        $orderDateValue = date('Y-m-d', $orderDateTimestamp);
+    }
+}
 
 // Build query strings for navigation so AJAX links can pass parameters via data-params and fall back to href navigation.
 $returnQuery = build_query($returnParams);
@@ -90,54 +100,161 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
 
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
-        <div class="row g-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2 class="h6 mb-1">Purchase order header</h2>
+                <small class="text-secondary">Update header details and select a supplier from the catalogue.</small>
+            </div>
+            <span class="badge text-bg-light border">PO Number: <?php echo e($purchaseOrder['po_number']); ?></span>
+        </div>
+
+        <div id="poUpdateAlert" class="alert d-none" role="alert"></div>
+
+        <form class="row g-3" id="poHeaderForm">
+            <input type="hidden" name="purchase_order_id" value="<?php echo (int) $purchaseOrder['id']; ?>">
+            <input type="hidden" name="supplier_code" id="supplierCode" value="<?php echo e($purchaseOrder['supplier_code'] ?? ''); ?>">
+
             <div class="col-md-4">
-                <div class="text-secondary small">Order Book</div>
-                <div class="fw-semibold"><?php echo e($purchaseOrder['order_book'] ?? 'Not set'); ?></div>
+                <label class="form-label">Order Book</label>
+                <input type="text" class="form-control" name="order_book" value="<?php echo e($purchaseOrder['order_book'] ?? ''); ?>" readonly>
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">Purchase Order Type</div>
-                <div class="fw-semibold"><?php echo ucfirst($poType); ?></div>
+                <label class="form-label">Purchase Order Type</label>
+                <input type="text" class="form-control" value="<?php echo ucfirst($poType); ?>" readonly>
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">Supplier</div>
-                <div class="fw-semibold"><?php echo e($purchaseOrder['supplier_name'] ?? ''); ?></div>
+                <label class="form-label">Uploaded</label>
+                <input type="text" class="form-control" value="<?php echo e($purchaseOrder['created_at'] ?? ''); ?>" readonly>
+            </div>
+
+            <div class="col-md-6">
+                <label for="supplierName" class="form-label">Supplier</label>
+                <div class="input-group">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="supplierName"
+                        name="supplier_name"
+                        list="supplierOptions"
+                        value="<?php echo e($purchaseOrder['supplier_name'] ?? ''); ?>"
+                        required
+                    >
+                    <button
+                        class="btn btn-outline-secondary"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#supplierList"
+                        aria-expanded="false"
+                        aria-controls="supplierList"
+                        id="supplierListToggle"
+                    >
+                        Supplier list
+                    </button>
+                </div>
+                <div class="form-text">Click “Supplier list” to pick from the full catalogue or type to search.</div>
+                <datalist id="supplierOptions">
+                    <?php foreach ($suppliers as $supplier) : ?>
+                        <option value="<?php echo e($supplier['supplier_name'] ?? ''); ?>">
+                            <?php echo e($supplier['supplier_code'] ?? ''); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </datalist>
+            </div>
+            <div class="col-md-3">
+                <label for="orderDate" class="form-label">Order Date</label>
+                <input type="date" class="form-control" id="orderDate" name="order_date" value="<?php echo e($orderDateValue); ?>">
+            </div>
+            <div class="col-md-3">
+                <label for="orderSheet" class="form-label">Order Sheet</label>
+                <input type="text" class="form-control" id="orderSheet" name="order_sheet_no" value="<?php echo e($purchaseOrder['order_sheet_no'] ?? ''); ?>">
+            </div>
+
+            <div class="col-md-4">
+                <label for="reference" class="form-label">Reference</label>
+                <input type="text" class="form-control" id="reference" name="reference" value="<?php echo e($purchaseOrder['reference'] ?? ''); ?>">
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">Order Date</div>
-                <div class="fw-semibold"><?php echo e($purchaseOrder['order_date'] ?? ''); ?></div>
+                <label for="exclusiveAmount" class="form-label">Exclusive Amount</label>
+                <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="exclusiveAmount"
+                    name="exclusive_amount"
+                    value="<?php echo number_format($exclusiveAmount, 2, '.', ''); ?>"
+                >
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">Order Sheet</div>
-                <div class="fw-semibold"><?php echo e($purchaseOrder['order_sheet_no'] ?? ''); ?></div>
+                <label for="vatPercent" class="form-label">VAT %</label>
+                <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="vatPercent"
+                    name="vat_percent"
+                    value="<?php echo number_format($vatPercent, 2, '.', ''); ?>"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label for="vatAmount" class="form-label">VAT Amount</label>
+                <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="vatAmount"
+                    name="vat_amount"
+                    value="<?php echo number_format($vatAmount, 2, '.', ''); ?>"
+                >
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">Reference</div>
-                <div class="fw-semibold"><?php echo e($purchaseOrder['reference'] ?? ''); ?></div>
+                <label for="totalAmount" class="form-label">Inclusive Amount</label>
+                <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="totalAmount"
+                    name="total_amount"
+                    value="<?php echo number_format($inclusiveAmount, 2, '.', ''); ?>"
+                >
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">Exclusive Amount</div>
-                <div class="fw-semibold">R <?php echo number_format($exclusiveAmount, 2); ?></div>
+                <label class="form-label">Total Amount (Lines)</label>
+                <input
+                    type="text"
+                    class="form-control"
+                    value="R <?php echo number_format($calculatedLineTotal, 2); ?>"
+                    readonly
+                >
             </div>
-            <div class="col-md-4">
-                <div class="text-secondary small">VAT %</div>
-                <div class="fw-semibold"><?php echo number_format($vatPercent, 2); ?>%</div>
+
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <div class="text-secondary small">Only the latest version of a purchase order can be edited.</div>
+                <button type="submit" class="btn btn-primary">Save header</button>
             </div>
-            <div class="col-md-4">
-                <div class="text-secondary small">VAT Amount</div>
-                <div class="fw-semibold">R <?php echo number_format($vatAmount, 2); ?></div>
-            </div>
-            <div class="col-md-4">
-                <div class="text-secondary small">Inclusive Amount</div>
-                <div class="fw-semibold">R <?php echo number_format($inclusiveAmount, 2); ?></div>
-            </div>
-            <div class="col-md-4">
-                <div class="text-secondary small">Total Amount (Lines)</div>
-                <div class="fw-semibold">R <?php echo number_format($calculatedLineTotal, 2); ?></div>
-            </div>
-            <div class="col-md-4">
-                <div class="text-secondary small">Uploaded</div>
-                <div class="fw-semibold"><?php echo e($purchaseOrder['created_at'] ?? ''); ?></div>
+        </form>
+
+        <div class="collapse mt-3" id="supplierList">
+            <div class="border rounded p-2" style="max-height: 320px; overflow-y: auto;">
+                <?php if (empty($suppliers)) : ?>
+                    <div class="text-secondary">No suppliers are available to select.</div>
+                <?php else : ?>
+                    <div class="list-group list-group-flush">
+                        <?php foreach ($suppliers as $supplier) : ?>
+                            <button
+                                type="button"
+                                class="list-group-item list-group-item-action"
+                                data-supplier-name="<?php echo e($supplier['supplier_name'] ?? ''); ?>"
+                                data-supplier-code="<?php echo e($supplier['supplier_code'] ?? ''); ?>"
+                            >
+                                <div class="fw-semibold mb-1"><?php echo e($supplier['supplier_name'] ?? ''); ?></div>
+                                <?php if (!empty($supplier['supplier_code'])) : ?>
+                                    <div class="text-secondary small">Supplier code: <?php echo e($supplier['supplier_code']); ?></div>
+                                <?php endif; ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -246,3 +363,123 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        const form = document.getElementById('poHeaderForm');
+        const alertBox = document.getElementById('poUpdateAlert');
+        const supplierList = document.getElementById('supplierList');
+        const supplierNameInput = document.getElementById('supplierName');
+        const supplierCodeInput = document.getElementById('supplierCode');
+
+        function showAlert(type, message) {
+            if (!alertBox) {
+                return;
+            }
+
+            alertBox.className = `alert alert-${type}`;
+            alertBox.textContent = message;
+        }
+
+        function clearAlert() {
+            if (!alertBox) {
+                return;
+            }
+
+            alertBox.className = 'alert d-none';
+            alertBox.textContent = '';
+        }
+
+        document.querySelectorAll('[data-supplier-name]').forEach((button) => {
+            button.addEventListener('click', () => {
+                if (supplierNameInput) {
+                    supplierNameInput.value = button.dataset.supplierName || '';
+                }
+
+                if (supplierCodeInput) {
+                    supplierCodeInput.value = button.dataset.supplierCode || '';
+                }
+
+                if (supplierList) {
+                    const collapse = bootstrap.Collapse.getOrCreateInstance(supplierList);
+                    collapse.hide();
+                }
+
+                showAlert('info', 'Supplier selected. Save the header to apply this change.');
+            });
+        });
+
+        if (form) {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                clearAlert();
+
+                const formData = new FormData(form);
+                showAlert('info', 'Saving purchase order header...');
+
+                try {
+                    const response = await fetch('purchase_order_update.php', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Unable to update the purchase order header.');
+                    }
+
+                    showAlert('success', data.message || 'Purchase order header updated successfully.');
+
+                    // Refresh key fields with the latest values returned from the server.
+                    if (data.purchaseOrder) {
+                        const updated = data.purchaseOrder;
+
+                        if (supplierNameInput && updated.supplier_name !== undefined) {
+                            supplierNameInput.value = updated.supplier_name;
+                        }
+
+                        if (supplierCodeInput && updated.supplier_code !== undefined) {
+                            supplierCodeInput.value = updated.supplier_code;
+                        }
+
+                        const orderDateInput = document.getElementById('orderDate');
+                        if (orderDateInput && updated.order_date) {
+                            const parsedDate = new Date(updated.order_date);
+                            const isoValue = Number.isNaN(parsedDate.getTime())
+                                ? ''
+                                : parsedDate.toISOString().slice(0, 10);
+                            orderDateInput.value = isoValue;
+                        }
+
+                        const fieldMap = {
+                            order_sheet_no: document.getElementById('orderSheet'),
+                            reference: document.getElementById('reference'),
+                            vat_percent: document.getElementById('vatPercent'),
+                            vat_amount: document.getElementById('vatAmount'),
+                            total_amount: document.getElementById('totalAmount'),
+                        };
+
+                        Object.keys(fieldMap).forEach((key) => {
+                            if (updated[key] !== undefined && fieldMap[key]) {
+                                fieldMap[key].value = updated[key];
+                            }
+                        });
+
+                        const exclusiveField = document.getElementById('exclusiveAmount');
+                        if (exclusiveField) {
+                            const exclusiveKey = Object.prototype.hasOwnProperty.call(updated, 'subtotal')
+                                ? 'subtotal'
+                                : 'exclusive_amount';
+                            if (updated[exclusiveKey] !== undefined) {
+                                exclusiveField.value = updated[exclusiveKey];
+                            }
+                        }
+                    }
+                } catch (error) {
+                    showAlert('danger', error.message);
+                }
+            });
+        }
+    })();
+</script>
