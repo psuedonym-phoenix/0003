@@ -173,7 +173,7 @@ $nextUrl = $nextPo !== null ? 'po_view.php?' . build_query(array_merge($sharedPa
             <h3 class="h6 text-uppercase text-secondary mb-3">Financial summary</h3>
             <div class="row g-3">
                 <div class="col-md-3">
-                    <div class="text-secondary small">Subtotal</div>
+                    <div class="text-secondary small">Exclusive Amount</div>
                     <div class="fw-semibold"><?php echo display_amount($purchaseOrder['subtotal'] ?? 0); ?></div>
                 </div>
                 <div class="col-md-3">
@@ -185,6 +185,10 @@ $nextUrl = $nextPo !== null ? 'po_view.php?' . build_query(array_merge($sharedPa
                     <div class="fw-semibold"><?php echo display_amount($purchaseOrder['vat_amount'] ?? 0); ?></div>
                 </div>
                 <div class="col-md-3">
+                    <div class="text-secondary small">Inclusive Amount</div>
+                    <div class="fw-semibold"><?php echo display_amount($purchaseOrder['total_amount'] ?? 0); ?></div>
+                </div>
+                <div class="col-md-3">
                     <div class="text-secondary small"><?php echo display_text($purchaseOrder['misc1_label'] ?? 'Misc 1'); ?></div>
                     <div class="fw-semibold"><?php echo display_amount($purchaseOrder['misc1_amount'] ?? 0); ?></div>
                 </div>
@@ -193,11 +197,7 @@ $nextUrl = $nextPo !== null ? 'po_view.php?' . build_query(array_merge($sharedPa
                     <div class="fw-semibold"><?php echo display_amount($purchaseOrder['misc2_amount'] ?? 0); ?></div>
                 </div>
                 <div class="col-md-3">
-                    <div class="text-secondary small">Total Amount</div>
-                    <div class="fw-semibold"><?php echo display_amount($purchaseOrder['total_amount'] ?? 0); ?></div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-secondary small">Calculated Lines Total</div>
+                    <div class="text-secondary small">Total Amount (Calculated)</div>
                     <div class="fw-semibold"><?php echo display_amount($lineSummary['sum'] ?? 0); ?></div>
                 </div>
             </div>
