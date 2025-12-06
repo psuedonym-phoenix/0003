@@ -103,6 +103,22 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                 <div class="fw-semibold"><?php echo e($purchaseOrder['order_sheet_no'] ?? ''); ?></div>
             </div>
             <div class="col-md-4">
+                <div class="text-secondary small">Reference</div>
+                <div class="fw-semibold"><?php echo e($purchaseOrder['reference'] ?? ''); ?></div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-secondary small">VAT %</div>
+                <div class="fw-semibold"><?php echo number_format((float) ($purchaseOrder['vat_percent'] ?? 0), 2); ?>%</div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-secondary small">Exclusive Amount</div>
+                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['exclusive_amount'] ?? 0), 2); ?></div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-secondary small">Inclusive Amount</div>
+                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['inclusive_amount'] ?? 0), 2); ?></div>
+            </div>
+            <div class="col-md-4">
                 <div class="text-secondary small">Total Amount</div>
                 <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['total_amount'] ?? 0), 2); ?></div>
             </div>
@@ -140,6 +156,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                             <th scope="col" class="text-end">Ex VAT Amount</th>
                             <th scope="col" class="text-end">VAT Amount</th>
                             <th scope="col" class="text-end">Line Total</th>
+                            <th scope="col" class="text-end">Running Total</th>
                         <?php else : ?>
                             <th scope="col">Item Code</th>
                             <th scope="col">Description</th>
@@ -148,6 +165,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                             <th scope="col" class="text-end">Unit Price</th>
                             <th scope="col" class="text-end">Discount %</th>
                             <th scope="col" class="text-end">Net Price</th>
+                            <th scope="col" class="text-end">Running Total</th>
                         <?php endif; ?>
                     </tr>
                 </thead>
@@ -157,6 +175,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                             <td colspan="<?php echo $lineColumnCount; ?>" class="text-secondary">No line items were captured for this purchase order version.</td>
                         </tr>
                     <?php else : ?>
+                        <?php $runningTotal = 0.0; ?>
                         <?php foreach ($lineItems as $line) : ?>
                             <tr>
                                 <td class="fw-semibold"><?php echo e((string) ($line['line_no'] ?? '')); ?></td>
@@ -166,7 +185,9 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                                     <td class="text-end"><?php echo number_format((float) ($line['deposit_amount'] ?? 0), 2); ?></td>
                                     <td class="text-end"><?php echo number_format((float) ($line['ex_vat_amount'] ?? 0), 2); ?></td>
                                     <td class="text-end"><?php echo number_format((float) ($line['line_vat_amount'] ?? 0), 2); ?></td>
+                                    <?php $runningTotal += (float) ($line['line_total_amount'] ?? 0); ?>
                                     <td class="text-end"><?php echo number_format((float) ($line['line_total_amount'] ?? 0), 2); ?></td>
+                                    <td class="text-end fw-semibold"><?php echo number_format($runningTotal, 2); ?></td>
                                 <?php else : ?>
                                     <td><?php echo e($line['item_code'] ?? ''); ?></td>
                                     <td><?php echo e($line['description'] ?? ''); ?></td>
@@ -174,7 +195,9 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                                     <td><?php echo e($line['unit'] ?? ''); ?></td>
                                     <td class="text-end"><?php echo number_format((float) ($line['unit_price'] ?? 0), 2); ?></td>
                                     <td class="text-end"><?php echo number_format((float) ($line['discount_percent'] ?? 0), 2); ?></td>
+                                    <?php $runningTotal += (float) ($line['net_price'] ?? 0); ?>
                                     <td class="text-end"><?php echo number_format((float) ($line['net_price'] ?? 0), 2); ?></td>
+                                    <td class="text-end fw-semibold"><?php echo number_format($runningTotal, 2); ?></td>
                                 <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
