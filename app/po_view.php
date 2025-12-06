@@ -11,6 +11,22 @@ function e(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+// Provide consistent display values for optional text fields.
+function display_text($value): string
+{
+    if ($value === null || $value === '') {
+        return 'Not set';
+    }
+
+    return e((string) $value);
+}
+
+// Provide a currency-friendly display with a sensible default.
+function display_amount($value): string
+{
+    return 'R ' . number_format((float) ($value ?? 0), 2);
+}
+
 $viewData = fetch_purchase_order_view($_GET);
 
 if (isset($viewData['error'])) {
@@ -39,6 +55,7 @@ $purchaseOrder = $viewData['purchaseOrder'];
 $lineItems = $viewData['lineItems'];
 $poType = $viewData['poType'];
 $lineColumnCount = $viewData['lineColumnCount'];
+$lineSummary = $viewData['lineSummary'];
 $previousPo = $viewData['previousPo'];
 $nextPo = $viewData['nextPo'];
 $sharedParams = $viewData['sharedParams'];
@@ -79,50 +96,109 @@ $nextUrl = $nextPo !== null ? 'po_view.php?' . build_query(array_merge($sharedPa
 
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
+            <h2 class="h6 text-uppercase text-secondary mb-3">Header details</h2>
             <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="text-secondary small">Order Book</div>
-                    <div class="fw-semibold"><?php echo e($purchaseOrder['order_book'] ?? 'Not set'); ?></div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Header ID</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['id'] ?? ''); ?></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-secondary small">Purchase Order Type</div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">PO Number</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['po_number'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Order Book</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['order_book'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Order Sheet</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['order_sheet_no'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Order Type (header)</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['order_type'] ?? ($purchaseOrder['po_type'] ?? $poType)); ?></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Line layout</div>
                     <div class="fw-semibold"><?php echo ucfirst($poType); ?></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-secondary small">Supplier</div>
-                    <div class="fw-semibold"><?php echo e($purchaseOrder['supplier_name'] ?? ''); ?></div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Supplier ID</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['supplier_id'] ?? ''); ?></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="text-secondary small">Supplier Code</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['supplier_code'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Supplier Name</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['supplier_name'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
                     <div class="text-secondary small">Order Date</div>
-                    <div class="fw-semibold"><?php echo e($purchaseOrder['order_date'] ?? ''); ?></div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['order_date'] ?? ''); ?></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-secondary small">Order Sheet</div>
-                    <div class="fw-semibold"><?php echo e($purchaseOrder['order_sheet_no'] ?? ''); ?></div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Cost Code</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['cost_code'] ?? ''); ?></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="text-secondary small">Cost Code Description</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['cost_code_description'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Terms</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['terms'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
                     <div class="text-secondary small">Reference</div>
-                    <div class="fw-semibold"><?php echo e($purchaseOrder['reference'] ?? ''); ?></div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['reference'] ?? ''); ?></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="text-secondary small">Created By</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['created_by'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Source Filename</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['source_filename'] ?? ''); ?></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Uploaded</div>
+                    <div class="fw-semibold"><?php echo display_text($purchaseOrder['created_at'] ?? ''); ?></div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h3 class="h6 text-uppercase text-secondary mb-3">Financial summary</h3>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="text-secondary small">Subtotal</div>
+                    <div class="fw-semibold"><?php echo display_amount($purchaseOrder['subtotal'] ?? 0); ?></div>
+                </div>
+                <div class="col-md-3">
                     <div class="text-secondary small">VAT %</div>
                     <div class="fw-semibold"><?php echo number_format((float) ($purchaseOrder['vat_percent'] ?? 0), 2); ?>%</div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-secondary small">Exclusive Amount</div>
-                    <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['exclusive_amount'] ?? 0), 2); ?></div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">VAT Amount</div>
+                    <div class="fw-semibold"><?php echo display_amount($purchaseOrder['vat_amount'] ?? 0); ?></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-secondary small">Inclusive Amount</div>
-                    <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['inclusive_amount'] ?? 0), 2); ?></div>
+                <div class="col-md-3">
+                    <div class="text-secondary small"><?php echo display_text($purchaseOrder['misc1_label'] ?? 'Misc 1'); ?></div>
+                    <div class="fw-semibold"><?php echo display_amount($purchaseOrder['misc1_amount'] ?? 0); ?></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="text-secondary small"><?php echo display_text($purchaseOrder['misc2_label'] ?? 'Misc 2'); ?></div>
+                    <div class="fw-semibold"><?php echo display_amount($purchaseOrder['misc2_amount'] ?? 0); ?></div>
+                </div>
+                <div class="col-md-3">
                     <div class="text-secondary small">Total Amount</div>
-                    <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['total_amount'] ?? 0), 2); ?></div>
+                    <div class="fw-semibold"><?php echo display_amount($purchaseOrder['total_amount'] ?? 0); ?></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-secondary small">Uploaded</div>
-                    <div class="fw-semibold"><?php echo e($purchaseOrder['created_at'] ?? ''); ?></div>
+                <div class="col-md-3">
+                    <div class="text-secondary small">Calculated Lines Total</div>
+                    <div class="fw-semibold"><?php echo display_amount($lineSummary['sum'] ?? 0); ?></div>
                 </div>
             </div>
         </div>
