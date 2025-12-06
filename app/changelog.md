@@ -45,3 +45,4 @@
 l view.
 - 2025-12-06: Updated purchase order view amounts to show VAT alongside exclusive and inclusive totals and ensured VAT data is passed through helpers.
 - 2025-12-06: Adjusted purchase order financial summary to show exclusive/inclusive amounts and align total with calculated line values.
+- 2025-05-21: Reordered purchase order amounts so exclusive totals precede VAT, pulled the exclusive figure from subtotal, and set total amount to the calculated line sum.

@@ -29,9 +29,18 @@ $previousPo = $viewData['previousPo'];
 $nextPo = $viewData['nextPo'];
 $sharedParams = $viewData['sharedParams'];
 $returnParams = $viewData['returnParams'];
+$lineSummary = $viewData['lineSummary'];
 $returnViewLabel = ($returnParams['view'] ?? 'purchase_orders') === 'line_entry_enquiry'
     ? 'Back to Line Entry Enquiry'
     : 'Back to Purchase Orders';
+
+// Normalise key financial amounts so the view can show consistent figures
+// regardless of whether older columns like exclusive_amount are still present.
+$exclusiveAmount = (float) ($purchaseOrder['subtotal'] ?? $purchaseOrder['exclusive_amount'] ?? 0);
+$inclusiveAmount = (float) ($purchaseOrder['total_amount'] ?? 0);
+$vatPercent = (float) ($purchaseOrder['vat_percent'] ?? 0);
+$vatAmount = (float) ($purchaseOrder['vat_amount'] ?? 0);
+$calculatedLineTotal = (float) ($lineSummary['sum'] ?? 0);
 
 // Build query strings for navigation so AJAX links can pass parameters via data-params and fall back to href navigation.
 $returnQuery = build_query($returnParams);
@@ -107,24 +116,24 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                 <div class="fw-semibold"><?php echo e($purchaseOrder['reference'] ?? ''); ?></div>
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">VAT %</div>
-                <div class="fw-semibold"><?php echo number_format((float) ($purchaseOrder['vat_percent'] ?? 0), 2); ?>%</div>
+                <div class="text-secondary small">Exclusive Amount</div>
+                <div class="fw-semibold">R <?php echo number_format($exclusiveAmount, 2); ?></div>
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">Exclusive Amount</div>
-                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['exclusive_amount'] ?? 0), 2); ?></div>
+                <div class="text-secondary small">VAT %</div>
+                <div class="fw-semibold"><?php echo number_format($vatPercent, 2); ?>%</div>
             </div>
             <div class="col-md-4">
                 <div class="text-secondary small">VAT Amount</div>
-                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['vat_amount'] ?? 0), 2); ?></div>
+                <div class="fw-semibold">R <?php echo number_format($vatAmount, 2); ?></div>
             </div>
             <div class="col-md-4">
                 <div class="text-secondary small">Inclusive Amount</div>
-                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['total_amount'] ?? 0), 2); ?></div>
+                <div class="fw-semibold">R <?php echo number_format($inclusiveAmount, 2); ?></div>
             </div>
             <div class="col-md-4">
-                <div class="text-secondary small">Total Amount</div>
-                <div class="fw-semibold">R <?php echo number_format((float) ($purchaseOrder['total_amount'] ?? 0), 2); ?></div>
+                <div class="text-secondary small">Total Amount (Lines)</div>
+                <div class="fw-semibold">R <?php echo number_format($calculatedLineTotal, 2); ?></div>
             </div>
             <div class="col-md-4">
                 <div class="text-secondary small">Uploaded</div>
