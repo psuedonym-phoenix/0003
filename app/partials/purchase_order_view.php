@@ -151,50 +151,54 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                 <label for="reference" class="form-label">Reference</label>
                 <input type="text" class="form-control" id="reference" name="reference" value="<?php echo e($purchaseOrder['reference'] ?? ''); ?>">
             </div>
-            <div class="col-md-4">
-                <label for="exclusiveAmount" class="form-label">Exclusive Amount</label>
-                <input
-                    type="number"
-                    step="0.01"
-                    class="form-control"
-                    id="exclusiveAmount"
-                    name="exclusive_amount"
-                    value="<?php echo number_format($exclusiveAmount, 2, '.', ''); ?>"
-                >
-            </div>
-            <div class="col-md-4">
-                <label for="vatPercent" class="form-label">VAT %</label>
-                <input
-                    type="number"
-                    step="0.01"
-                    class="form-control"
-                    id="vatPercent"
-                    name="vat_percent"
-                    value="<?php echo number_format($vatPercent, 2, '.', ''); ?>"
-                >
-            </div>
-
-            <div class="col-md-4">
-                <label for="vatAmount" class="form-label">VAT Amount</label>
-                <input
-                    type="number"
-                    step="0.01"
-                    class="form-control"
-                    id="vatAmount"
-                    name="vat_amount"
-                    value="<?php echo number_format($vatAmount, 2, '.', ''); ?>"
-                >
-            </div>
-            <div class="col-md-4">
-                <label for="totalAmount" class="form-label">Inclusive Amount</label>
-                <input
-                    type="number"
-                    step="0.01"
-                    class="form-control"
-                    id="totalAmount"
-                    name="total_amount"
-                    value="<?php echo number_format($inclusiveAmount, 2, '.', ''); ?>"
-                >
+            <div class="col-12">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="exclusiveAmount" class="form-label">Exclusive Amount</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            class="form-control"
+                            id="exclusiveAmount"
+                            name="exclusive_amount"
+                            value="<?php echo number_format($exclusiveAmount, 2, '.', ''); ?>"
+                        >
+                    </div>
+                    <div class="col-md-3">
+                        <label for="vatPercent" class="form-label small text-secondary">VAT %</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            class="form-control"
+                            id="vatPercent"
+                            name="vat_percent"
+                            value="<?php echo number_format($vatPercent, 2, '.', ''); ?>"
+                            style="font-size: 0.9rem;"
+                        >
+                    </div>
+                    <div class="col-md-3">
+                        <label for="vatAmount" class="form-label">VAT Amount</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            class="form-control"
+                            id="vatAmount"
+                            name="vat_amount"
+                            value="<?php echo number_format($vatAmount, 2, '.', ''); ?>"
+                        >
+                    </div>
+                    <div class="col-md-3">
+                        <label for="totalAmount" class="form-label">Inclusive Amount</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            class="form-control"
+                            id="totalAmount"
+                            name="total_amount"
+                            value="<?php echo number_format($inclusiveAmount, 2, '.', ''); ?>"
+                        >
+                    </div>
+                </div>
             </div>
             <div class="col-md-4">
                 <label class="form-label">Total Amount (Lines)</label>
