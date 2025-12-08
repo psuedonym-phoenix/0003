@@ -1,9 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/app/config.php';
-require_once __DIR__ . '/app/db.php';
-require_once __DIR__ . '/app/api_key.php';
+require_once __DIR__ . '/app/bootstrap_api.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -20,11 +18,7 @@ if (!is_array($data)) {
     exit;
 }
 
-if (!isset($data['api_key']) || $data['api_key'] !== EEMS_API_KEY) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Forbidden']);
-    exit;
-}
+enforce_api_key($data);
 
 function field($arr,$key){ return isset($arr[$key]) ? trim($arr[$key]) : ''; }
 

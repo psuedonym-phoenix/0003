@@ -52,3 +52,4 @@ l view.
 - 2025-05-27: Displayed purchase order version counts in the listing to show how many uploads exist per PO number.
 - 2025-05-28: Saving a purchase order header now creates a new version with duplicated line items and a supplier dropdown that lists supplier names.
 - 2025-05-29: Centralised API database connections through config/db helpers and moved the shared API key into its own file for safer reuse.
+- 2025-05-30: Added a shared API bootstrap to load config, database, and API key centrally and updated all root APIs to rely on it.
