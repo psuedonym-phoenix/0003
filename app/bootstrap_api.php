@@ -15,17 +15,35 @@ if (!function_exists('enforce_api_key')) {
     function resolve_api_key(array $payload): ?string
     {
         // Accept the canonical field, common camelCase variant, a query string
-        // fallback, or the X-API-Key header. The first non-empty value wins.
+        // fallback, or the X-API-Key/Authorization header. The first non-empty
+        // value wins. Trimming guards against accidental spaces pasted into Excel.
         $candidates = [
             $payload['api_key'] ?? null,
             $payload['apiKey'] ?? null,
+            $payload['API_KEY'] ?? null,
+            $payload['apikey'] ?? null,
+            $_POST['api_key'] ?? null,
+            $_POST['apiKey'] ?? null,
             $_GET['api_key'] ?? null,
+            $_GET['apiKey'] ?? null,
             $_SERVER['HTTP_X_API_KEY'] ?? null,
+            $_SERVER['HTTP_AUTHORIZATION'] ?? null,
         ];
 
         foreach ($candidates as $candidate) {
-            if ($candidate !== null && $candidate !== '') {
-                return (string) $candidate;
+            if ($candidate === null || $candidate === '') {
+                continue;
+            }
+
+            // Accept either a bare key or prefixed header value such as
+            // "Bearer <key>" or "ApiKey <key>"; Excel callers often use plain values.
+            $candidate = trim((string) $candidate);
+            if (stripos($candidate, 'bearer ') === 0 || stripos($candidate, 'apikey ') === 0) {
+                $candidate = trim(substr($candidate, strpos($candidate, ' ') + 1));
+            }
+
+            if ($candidate !== '') {
+                return $candidate;
             }
         }
 
@@ -41,7 +59,10 @@ if (!function_exists('enforce_api_key')) {
 
         if ($apiKey !== EEMS_API_KEY) {
             http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Forbidden']);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Forbidden: missing or invalid API key',
+            ]);
             exit;
         }
     }
