@@ -62,7 +62,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body d-flex justify-content-between align-items-start flex-wrap gap-2">
         <div>
-            <h1 class="h5 mb-1">Purchase Order <?php echo e($purchaseOrder['po_number']); ?></h1>
+            <h1 class="h4 mb-1 fw-bold">Purchase Order <?php echo e($purchaseOrder['po_number']); ?></h1>
             <div class="text-secondary">Latest version with line items from purchase_order_lines.</div>
         </div>
         <div class="d-flex gap-2">
@@ -105,7 +105,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                 <h2 class="h6 mb-1">Purchase order header</h2>
                 <small class="text-secondary">Update header details and select a supplier from the catalogue.</small>
             </div>
-            <span class="badge text-bg-light border">PO Number: <?php echo e($purchaseOrder['po_number']); ?></span>
+            <span class="badge text-bg-light border fs-6">PO Number: <?php echo e($purchaseOrder['po_number']); ?></span>
         </div>
 
         <div id="poUpdateAlert" class="alert d-none" role="alert"></div>
@@ -113,16 +113,14 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
         <form class="row g-3" id="poHeaderForm">
             <input type="hidden" name="purchase_order_id" value="<?php echo (int) $purchaseOrder['id']; ?>">
             <input type="hidden" name="supplier_code" id="supplierCode" value="<?php echo e($purchaseOrder['supplier_code'] ?? ''); ?>">
+            <input type="hidden" name="order_sheet_no" value="<?php echo e($purchaseOrder['order_sheet_no'] ?? ''); ?>">
 
-            <div class="col-md-4">
-                <label class="form-label">Order Book</label>
-                <input type="text" class="form-control" name="order_book" value="<?php echo e($purchaseOrder['order_book'] ?? ''); ?>" readonly>
-            </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label class="form-label">Purchase Order Type</label>
                 <input type="text" class="form-control" value="<?php echo ucfirst($poType); ?>" readonly>
+                <div class="form-text">This type is fixed for the purchase order and cannot be changed.</div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label class="form-label">Uploaded</label>
                 <input type="text" class="form-control" value="<?php echo e($purchaseOrder['created_at'] ?? ''); ?>" readonly>
             </div>
@@ -144,13 +142,9 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                 </select>
                 <div class="form-text">Use the dropdown to choose a supplier by name.</div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <label for="orderDate" class="form-label">Order Date</label>
                 <input type="date" class="form-control" id="orderDate" name="order_date" value="<?php echo e($orderDateValue); ?>">
-            </div>
-            <div class="col-md-3">
-                <label for="orderSheet" class="form-label">Order Sheet</label>
-                <input type="text" class="form-control" id="orderSheet" name="order_sheet_no" value="<?php echo e($purchaseOrder['order_sheet_no'] ?? ''); ?>">
             </div>
 
             <div class="col-md-4">
@@ -426,7 +420,6 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                         }
 
                         const fieldMap = {
-                            order_sheet_no: document.getElementById('orderSheet'),
                             reference: document.getElementById('reference'),
                             vat_percent: document.getElementById('vatPercent'),
                             vat_amount: document.getElementById('vatAmount'),

@@ -57,3 +57,4 @@ l view.
 - 2025-06-01: Trimmed and expanded API key resolution (including Authorization headers) to reduce false 403 errors from Excel clients posting purchase orders.
 - 2025-06-02: Pointed the root-level APIs at the shared /app config and API key so database credentials and authentication stay in sync.
 - 2025-06-03: Displayed item codes in the line entry enquiry and added an item code filter alongside sorting support.
+- 2025-12-08: Enlarged the PO number display in the purchase order header view, hid order book/order sheet fields, and kept the purchase order type fixed.
