@@ -57,6 +57,7 @@ $selectedBook = trim($_GET['order_book'] ?? '');
 $poNumber = trim($_GET['po_number'] ?? '');
 $supplierQuery = trim($_GET['supplier'] ?? '');
 $searchQuery = trim($_GET['query'] ?? '');
+$itemCode = trim($_GET['item_code'] ?? '');
 $searchTerms = [];
 $orderDateFrom = trim($_GET['order_date_from'] ?? '');
 $orderDateTo = trim($_GET['order_date_to'] ?? '');
@@ -75,6 +76,7 @@ $hasFilters = $searchQuery !== ''
     || $selectedBook !== ''
     || $poNumber !== ''
     || $supplierQuery !== ''
+    || $itemCode !== ''
     || $orderDateFrom !== ''
     || $orderDateTo !== '';
 
@@ -99,6 +101,7 @@ $sortableColumns = [
     'supplier' => 'po.supplier_name',
     'order_date' => 'po.order_date',
     'line_no' => 'pol.line_no',
+    'item_code' => 'pol.item_code',
     'description' => 'pol.description',
 ];
 
@@ -140,6 +143,10 @@ if ($hasFilters) {
         $conditions[] = 'po.supplier_name LIKE :supplier';
     }
 
+    if ($itemCode !== '') {
+        $conditions[] = 'pol.item_code LIKE :itemCode';
+    }
+
     if ($orderDateFrom !== '') {
         $conditions[] = 'po.order_date >= :orderDateFrom';
     }
@@ -165,6 +172,7 @@ if ($hasFilters) {
             po.supplier_name,
             po.order_date,
             pol.line_no,
+            pol.item_code,
             pol.description,
             pol.line_type,
             pol.quantity,
@@ -214,6 +222,12 @@ if ($hasFilters) {
         $queryStmt->bindValue(':orderDateFrom', $orderDateFrom, PDO::PARAM_STR);
     }
 
+    if ($itemCode !== '') {
+        $itemCodeTerm = '%' . $itemCode . '%';
+        $countStmt->bindValue(':itemCode', $itemCodeTerm, PDO::PARAM_STR);
+        $queryStmt->bindValue(':itemCode', $itemCodeTerm, PDO::PARAM_STR);
+    }
+
     if ($orderDateTo !== '') {
         $countStmt->bindValue(':orderDateTo', $orderDateTo, PDO::PARAM_STR);
         $queryStmt->bindValue(':orderDateTo', $orderDateTo, PDO::PARAM_STR);
@@ -245,7 +259,7 @@ if ($hasFilters) {
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                 <div>
                     <h2 class="h5 mb-1">Line entry enquiry</h2>
-                    <small class="text-secondary">Filter by PO number, order book, supplier, or description. Click a column heading to sort.</small>
+                    <small class="text-secondary">Filter by PO number, order book, supplier, item code, or description. Click a column heading to sort.</small>
                 </div>
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Apply filters</button>
@@ -298,6 +312,17 @@ if ($hasFilters) {
                             value="<?php echo e($supplierQuery); ?>"
                         >
                         <datalist id="lineSupplierSuggestions"></datalist>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label mb-1" for="lineItemCode">Item code</label>
+                        <input
+                            type="search"
+                            id="lineItemCode"
+                            name="item_code"
+                            class="form-control form-control-sm"
+                            placeholder="Contains"
+                            value="<?php echo e($itemCode); ?>"
+                        >
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
                         <label class="form-label mb-1" for="lineSearch">Description</label>
@@ -365,6 +390,7 @@ if ($hasFilters) {
                                 'supplier' => 'Supplier',
                                 'order_date' => 'Order date',
                                 'line_no' => 'Line no.',
+                                'item_code' => 'Item code',
                                 'description' => 'Description',
                             ];
 
@@ -397,11 +423,11 @@ if ($hasFilters) {
                     <tbody>
                         <?php if (!$hasFilters) : ?>
                             <tr>
-                                <td colspan="11" class="text-center text-secondary py-4">Add a filter above to start the line enquiry.</td>
+                                <td colspan="12" class="text-center text-secondary py-4">Add a filter above to start the line enquiry.</td>
                             </tr>
                         <?php elseif ($totalMatches === 0) : ?>
                             <tr>
-                                <td colspan="11" class="text-center text-warning py-4">No line items matched your filters.</td>
+                                <td colspan="12" class="text-center text-warning py-4">No line items matched your filters.</td>
                             </tr>
                         <?php else : ?>
                             <?php foreach ($results as $row) : ?>
@@ -426,6 +452,7 @@ if ($hasFilters) {
                                     'po_number' => $row['po_number'],
                                     'order_book' => $selectedBook,
                                     'supplier' => $supplierQuery,
+                                    'item_code' => $itemCode,
                                     'query' => $searchQuery,
                                     'order_date_from' => $orderDateFrom,
                                     'order_date_to' => $orderDateTo,
@@ -441,6 +468,7 @@ if ($hasFilters) {
                                     <td><?php echo e($row['supplier_name'] ?? ''); ?></td>
                                     <td><?php echo e($row['order_date'] ?? ''); ?></td>
                                     <td><?php echo e($row['line_no']); ?></td>
+                                    <td><?php echo e($row['item_code'] ?? ''); ?></td>
                                     <td><?php echo e($row['description']); ?></td>
                                     <td class="text-end"><?php echo number_format($displayQuantity, 2); ?></td>
                                     <td><?php echo e($displayUnit); ?></td>
@@ -492,6 +520,7 @@ if ($hasFilters) {
         const supplierInput = document.getElementById('lineSupplier');
         const poNumberInput = document.getElementById('linePoNumber');
         const orderBookSelect = document.getElementById('lineOrderBook');
+        const itemCodeInput = document.getElementById('lineItemCode');
         const orderDateFromInput = document.getElementById('lineOrderDateFrom');
         const orderDateToInput = document.getElementById('lineOrderDateTo');
         const paginationLinks = Array.from(document.querySelectorAll('.line-pagination'));
@@ -542,6 +571,10 @@ if ($hasFilters) {
                 params.set('supplier', supplierInput.value.trim());
             }
 
+            if (itemCodeInput && itemCodeInput.value.trim() !== '') {
+                params.set('item_code', itemCodeInput.value.trim());
+            }
+
             if (orderDateFromInput && orderDateFromInput.value !== '') {
                 params.set('order_date_from', orderDateFromInput.value);
             }
@@ -585,9 +618,13 @@ if ($hasFilters) {
             const hasMeaningfulDescription = descriptionQuery.length >= 2;
             const hasOrderBookFilter = Boolean(orderBookSelect && orderBookSelect.value !== '');
             const hasPoNumberFilter = Boolean(poNumberInput && poNumberInput.value.trim() !== '');
-            const shouldLoadAllSuppliers = !hasMeaningfulDescription && !hasOrderBookFilter && !hasPoNumberFilter;
+            const hasItemCodeFilter = Boolean(itemCodeInput && itemCodeInput.value.trim() !== '');
+            const shouldLoadAllSuppliers = !hasMeaningfulDescription
+                && !hasOrderBookFilter
+                && !hasPoNumberFilter
+                && !hasItemCodeFilter;
 
-            if (!hasMeaningfulDescription && !shouldLoadAllSuppliers) {
+            if (!hasMeaningfulDescription && !shouldLoadAllSuppliers && !hasItemCodeFilter) {
                 clearSupplierSuggestions();
                 return;
             }
@@ -603,6 +640,10 @@ if ($hasFilters) {
 
             if (hasPoNumberFilter) {
                 params.set('po_number', poNumberInput.value.trim());
+            }
+
+            if (hasItemCodeFilter) {
+                params.set('item_code', itemCodeInput.value.trim());
             }
 
             if (shouldLoadAllSuppliers) {
@@ -709,6 +750,10 @@ if ($hasFilters) {
             poNumberInput.addEventListener('input', queueSupplierSuggestions);
         }
 
+        if (itemCodeInput) {
+            itemCodeInput.addEventListener('input', queueSupplierSuggestions);
+        }
+
         if (supplierInput) {
             supplierInput.addEventListener('focus', refreshSupplierSuggestions);
         }
@@ -752,6 +797,10 @@ if ($hasFilters) {
 
                 if (supplierInput) {
                     supplierInput.value = '';
+                }
+
+                if (itemCodeInput) {
+                    itemCodeInput.value = '';
                 }
 
                 if (orderDateFromInput) {
