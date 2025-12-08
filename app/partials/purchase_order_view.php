@@ -141,22 +141,34 @@
             <input type="hidden" name="order_sheet_no" value="<?php echo e($purchaseOrder['order_sheet_no'] ?? ''); ?>">
 			<div class="row mb-1">
 				
-				<label for="supplierSelect" class="col-sm-1 col-form-label">Supplier</label>
-				<div class="col-sm-3">
-					<select class="form-select" id="supplierSelect" name="supplier_name" required>
-						<option value="">Select a supplier</option>
-						<?php foreach ($suppliers as $supplier) : ?>
-						<?php $supplierNameOption = $supplier['supplier_name'] ?? ''; ?>
-						<option
-						value="<?php echo e($supplierNameOption); ?>"
-						data-supplier-code="<?php echo e($supplier['supplier_code'] ?? ''); ?>"
-						<?php echo $supplierNameOption === ($purchaseOrder['supplier_name'] ?? '') ? 'selected' : ''; ?>
-						>
-							<?php echo e($supplierNameOption); ?>
-						</option>
-						<?php endforeach; ?>
-					</select>
-				</div>
+                                <label for="supplierInput" class="col-sm-1 col-form-label">Supplier</label>
+                                <div class="col-sm-3 position-relative">
+                                        <input
+                                        type="text"
+                                        class="form-control"
+                                        id="supplierInput"
+                                        name="supplier_name"
+                                        value="<?php echo e($purchaseOrder['supplier_name'] ?? ''); ?>"
+                                        placeholder="Type or select a supplier"
+                                        autocomplete="off"
+                                        list="supplierDatalist"
+                                        required
+                                        >
+                                        <div
+                                        id="supplierSuggestions"
+                                        class="list-group position-absolute w-100 shadow-sm d-none"
+                                        style="max-height: 260px; overflow-y: auto; z-index: 1050;"
+                                        aria-label="Supplier suggestions"
+                                        ></div>
+                                </div>
+                                <datalist id="supplierDatalist">
+                                        <?php foreach ($suppliers as $supplier) : ?>
+                                        <?php $supplierNameOption = $supplier['supplier_name'] ?? ''; ?>
+                                        <?php if ($supplierNameOption !== '') : ?>
+                                                <option value="<?php echo e($supplierNameOption); ?>">
+                                        <?php endif; ?>
+                                        <?php endforeach; ?>
+                                </datalist>
 				
 				
 				<div class="col-sm-4"></div>
@@ -425,133 +437,202 @@
 		</div>
 	</div>
 	
-	<script>
-		(function () {
-			const form = document.getElementById('poHeaderForm');
-			const alertBox = document.getElementById('poUpdateAlert');
-			const supplierCodeInput = document.getElementById('supplierCode');
-			const supplierSelect = document.getElementById('supplierSelect');
-			
-			function showAlert(type, message) {
-				if (!alertBox) {
-					return;
-				}
-				
-				alertBox.className = `alert alert-${type}`;
-				alertBox.textContent = message;
-			}
-			
-			function clearAlert() {
-				if (!alertBox) {
-					return;
-				}
-				
-				alertBox.className = 'alert d-none';
-				alertBox.textContent = '';
-			}
-			
-			function syncSupplierCodeFromSelect() {
-				if (!supplierSelect || !supplierCodeInput) {
-					return;
-				}
-				
-				const selectedOption = supplierSelect.options[supplierSelect.selectedIndex];
-				supplierCodeInput.value = selectedOption?.dataset?.supplierCode || '';
-			}
-			
-			if (supplierSelect) {
-				supplierSelect.addEventListener('change', () => {
-					syncSupplierCodeFromSelect();
-					showAlert('info', 'Supplier selected. Save the header to apply this change.');
-				});
-				
-				// Ensure the hidden supplier code matches the initial selection.
-				syncSupplierCodeFromSelect();
-			}
-			
-			if (form) {
-				form.addEventListener('submit', async (event) => {
-					event.preventDefault();
-					clearAlert();
-					
-					const formData = new FormData(form);
-					showAlert('info', 'Saving purchase order header...');
-					
-					try {
-						const response = await fetch('purchase_order_update.php', {
-							method: 'POST',
-							body: formData,
-						});
-						
-						const data = await response.json();
-						
-						if (!response.ok || !data.success) {
-							throw new Error(data.message || 'Unable to update the purchase order header.');
-						}
-						
-						showAlert('success', data.message || 'Purchase order header updated successfully.');
-						
-						// Refresh key fields with the latest values returned from the server.
-						if (data.purchaseOrder) {
-							const updated = data.purchaseOrder;
-							
-							if (supplierSelect && updated.supplier_name !== undefined) {
-								const matchingOption = Array.from(supplierSelect.options).find(
-								(option) => option.value === updated.supplier_name
-								);
-								
-								if (matchingOption) {
-									supplierSelect.value = matchingOption.value;
-									} else {
-									const fallbackOption = document.createElement('option');
-									fallbackOption.value = updated.supplier_name;
-									fallbackOption.textContent = updated.supplier_name;
-									fallbackOption.dataset.supplierCode = updated.supplier_code || '';
-									supplierSelect.appendChild(fallbackOption);
-									supplierSelect.value = updated.supplier_name;
-								}
-							}
-							
-							if (supplierCodeInput && updated.supplier_code !== undefined) {
-								supplierCodeInput.value = updated.supplier_code;
-							}
-							
-							const orderDateInput = document.getElementById('orderDate');
-							if (orderDateInput && updated.order_date) {
-								const parsedDate = new Date(updated.order_date);
-								const isoValue = Number.isNaN(parsedDate.getTime())
-								? ''
-								: parsedDate.toISOString().slice(0, 10);
-								orderDateInput.value = isoValue;
-							}
-							
-							const fieldMap = {
-								reference: document.getElementById('reference'),
-								vat_percent: document.getElementById('vatPercent'),
-								vat_amount: document.getElementById('vatAmount'),
-								total_amount: document.getElementById('totalAmount'),
-							};
-							
-							Object.keys(fieldMap).forEach((key) => {
-								if (updated[key] !== undefined && fieldMap[key]) {
-									fieldMap[key].value = updated[key];
-								}
-							});
-							
-							const exclusiveField = document.getElementById('exclusiveAmount');
-							if (exclusiveField) {
-								const exclusiveKey = Object.prototype.hasOwnProperty.call(updated, 'subtotal')
-								? 'subtotal'
-								: 'exclusive_amount';
-								if (updated[exclusiveKey] !== undefined) {
-									exclusiveField.value = updated[exclusiveKey];
-								}
-							}
-						}
-						} catch (error) {
-						showAlert('danger', error.message);
-					}
-				});
-			}
-		})();
-	</script>																			
+	
+<script>
+        (function () {
+                const form = document.getElementById('poHeaderForm');
+                const alertBox = document.getElementById('poUpdateAlert');
+                const supplierCodeInput = document.getElementById('supplierCode');
+                const supplierInput = document.getElementById('supplierInput');
+                const supplierSuggestions = document.getElementById('supplierSuggestions');
+                const supplierOptions = <?php echo json_encode(array_values(array_filter(array_map(static function ($supplier) {
+                        return [
+                                'name' => $supplier['supplier_name'] ?? '',
+                                'code' => $supplier['supplier_code'] ?? '',
+                        ];
+                }, $suppliers), static function ($supplier) {
+                        return $supplier['name'] !== '';
+                })), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+                let suggestionDebounce = null;
+
+                function showAlert(type, message) {
+                        if (!alertBox) {
+                                return;
+                        }
+
+                        alertBox.className = `alert alert-${type}`;
+                        alertBox.textContent = message;
+                }
+
+                function clearAlert() {
+                        if (!alertBox) {
+                                return;
+                        }
+
+                        alertBox.className = 'alert d-none';
+                        alertBox.textContent = '';
+                }
+
+                function fuzzyMatch(term, candidate) {
+                        const normalizedTerm = term.toLowerCase();
+                        const normalizedCandidate = candidate.toLowerCase();
+
+                        if (normalizedCandidate.includes(normalizedTerm)) {
+                                return true;
+                        }
+
+                        let position = 0;
+
+                        for (const character of normalizedTerm) {
+                                position = normalizedCandidate.indexOf(character, position);
+
+                                if (position === -1) {
+                                        return false;
+                                }
+
+                                position += 1;
+                        }
+
+                        return true;
+                }
+
+                function hideSupplierSuggestions() {
+                        if (!supplierSuggestions) {
+                                return;
+                        }
+
+                        supplierSuggestions.classList.add('d-none');
+                        supplierSuggestions.innerHTML = '';
+                }
+
+                function selectSupplier(name, code) {
+                        if (supplierInput) {
+                                supplierInput.value = name;
+                        }
+
+                        if (supplierCodeInput) {
+                                supplierCodeInput.value = code || '';
+                        }
+
+                        hideSupplierSuggestions();
+                        showAlert('info', 'Supplier selected. Save the header to apply this change.');
+                }
+
+                function renderSupplierSuggestions(term = '') {
+                        if (!supplierSuggestions || !supplierInput) {
+                                return;
+                        }
+
+                        const query = term.trim().toLowerCase();
+                        const matches = supplierOptions
+                                .filter((option) => query === '' || fuzzyMatch(query, option.name))
+                                .slice(0, 15);
+
+                        supplierSuggestions.innerHTML = '';
+
+                        if (matches.length === 0) {
+                                supplierSuggestions.classList.add('d-none');
+                                return;
+                        }
+
+                        matches.forEach((option) => {
+                                const button = document.createElement('button');
+                                button.type = 'button';
+                                button.className = 'list-group-item list-group-item-action';
+                                button.textContent = option.name;
+                                button.dataset.supplierCode = option.code || '';
+                                button.addEventListener('click', () => selectSupplier(option.name, option.code));
+                                supplierSuggestions.appendChild(button);
+                        });
+
+                        supplierSuggestions.classList.remove('d-none');
+                }
+
+                function queueSupplierSuggestions() {
+                        if (suggestionDebounce) {
+                                window.clearTimeout(suggestionDebounce);
+                        }
+
+                        suggestionDebounce = window.setTimeout(() => {
+                                renderSupplierSuggestions(supplierInput ? supplierInput.value : '');
+                        }, 150);
+                }
+
+                function syncSupplierCodeFromInput() {
+                        if (!supplierInput || !supplierCodeInput) {
+                                return;
+                        }
+
+                        const name = supplierInput.value.trim().toLowerCase();
+                        const match = supplierOptions.find((option) => option.name.toLowerCase() === name);
+                        supplierCodeInput.value = match ? (match.code || '') : '';
+                }
+
+                if (supplierInput) {
+                        supplierInput.addEventListener('focus', () => renderSupplierSuggestions(supplierInput.value));
+                        supplierInput.addEventListener('input', () => {
+                                syncSupplierCodeFromInput();
+                                queueSupplierSuggestions();
+                        });
+
+                        supplierInput.addEventListener('keydown', (event) => {
+                                if (event.key === 'Escape') {
+                                        hideSupplierSuggestions();
+                                }
+                        });
+
+                        supplierInput.addEventListener('blur', () => {
+                                window.setTimeout(hideSupplierSuggestions, 150);
+                                syncSupplierCodeFromInput();
+                        });
+
+                        syncSupplierCodeFromInput();
+                }
+
+                document.addEventListener('click', (event) => {
+                        if (!supplierSuggestions || supplierSuggestions.contains(event.target)) {
+                                return;
+                        }
+
+                        if (supplierInput && supplierInput.contains(event.target)) {
+                                return;
+                        }
+
+                        hideSupplierSuggestions();
+                });
+
+                const storedNotice = sessionStorage.getItem('poUpdateNotice');
+                if (storedNotice) {
+                        showAlert('success', storedNotice);
+                        sessionStorage.removeItem('poUpdateNotice');
+                }
+
+                if (form) {
+                        form.addEventListener('submit', async (event) => {
+                                event.preventDefault();
+                                clearAlert();
+
+                                const formData = new FormData(form);
+                                showAlert('info', 'Saving purchase order header...');
+
+                                try {
+                                        const response = await fetch('purchase_order_update.php', {
+                                                method: 'POST',
+                                                body: formData,
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (!response.ok || !data.success) {
+                                                throw new Error(data.message || 'Unable to update the purchase order header.');
+                                        }
+
+                                        sessionStorage.setItem('poUpdateNotice', data.message || 'Purchase order header updated successfully.');
+                                        window.location.reload();
+                                } catch (error) {
+                                        showAlert('danger', error.message);
+                                }
+                        });
+                }
+        })();
+</script>

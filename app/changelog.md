@@ -62,3 +62,4 @@ l view.
 - 2025-06-04: Organised purchase order financial fields into a single row with equal widths and reduced VAT % label text for better alignment.
 - 2025-06-05: Displayed supplier address and contact details on the purchase order view using stored header fields.
 - 2025-06-06: Pulled supplier address and contact details from the suppliers table on the purchase order view with purchase order fallbacks.
+- 2025-12-08: Refreshed purchase order saves to reload totals with a success notice and replaced the supplier dropdown with a fuzzy text/dropdown picker.
