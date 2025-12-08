@@ -1,6 +1,10 @@
 <?php
 header('Content-Type: application/json');
 
+require_once __DIR__ . '/app/config.php';
+require_once __DIR__ . '/app/db.php';
+require_once __DIR__ . '/app/api_key.php';
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'error' => 'Method not allowed']);
@@ -16,9 +20,7 @@ if (!is_array($data)) {
     exit;
 }
 
-const API_KEY = '%h68zOewi6lqsb7aaB4!VW4bF5^fsyGCGv%mGI6QSaD5!u0FDLjLp82MIQ61VO4J'; // must match VBA
-
-if (!isset($data['api_key']) || $data['api_key'] !== API_KEY) {
+if (!isset($data['api_key']) || $data['api_key'] !== EEMS_API_KEY) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Forbidden']);
     exit;
@@ -33,18 +35,8 @@ if ($supplier_name === '') {
     exit;
 }
 
-// DB connect
-$dbHost = 'cp53.domains.co.za';
-$dbName = 'filiades_eems';
-$dbUser = 'filiades_eemsdbuser';
-$dbPass = 'hV&2w6JfW6@Pi3q1'; 
-
-$dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4";
-
 try {
-    $pdo = new PDO($dsn, $dbUser, $dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    $pdo = get_db_connection();
 
     $stmt = $pdo->prepare("
         SELECT id, supplier_code, supplier_name

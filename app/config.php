@@ -1,10 +1,10 @@
 <?php
 // Database connection settings
-// Replace these values with the actual credentials on the hosting environment.
-$DB_HOST = 'localhost';
+// Centralised here so every API and page uses the same credentials.
+$DB_HOST = 'cp53.domains.co.za';
 $DB_NAME = 'filiades_eems';
-$DB_USER = 'db_username';
-$DB_PASS = 'db_password';
+$DB_USER = 'filiades_eemsdbuser';
+$DB_PASS = 'hV&2w6JfW6@Pi3q1';
 
 // Session settings
 // Use a custom name to avoid collisions with other apps on the same host.
