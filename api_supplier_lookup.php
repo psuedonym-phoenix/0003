@@ -1,7 +1,10 @@
 <?php
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/app/bootstrap_api.php';
+// Keep database and API key usage consistent with the /app configuration.
+require_once __DIR__ . '/app/config.php';
+require_once __DIR__ . '/app/db.php';
+require_once __DIR__ . '/app/api_key.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -18,7 +21,17 @@ if (!is_array($data)) {
     exit;
 }
 
+// Validate the shared API key so only authorised uploads are processed.
 enforce_api_key($data);
+
+function enforce_api_key(array $payload): void
+{
+    if (!isset($payload['api_key']) || $payload['api_key'] !== ApiKey) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Forbidden']);
+        exit;
+    }
+}
 
 function field($arr,$key){ return isset($arr[$key]) ? trim($arr[$key]) : ''; }
 

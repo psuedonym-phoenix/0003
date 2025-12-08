@@ -55,3 +55,4 @@ l view.
 - 2025-05-30: Added a shared API bootstrap to load config, database, and API key centrally and updated all root APIs to rely on it.
 - 2025-05-31: Relaxed API key resolution to accept legacy field names and headers so Excel uploads no longer hit 403 on purchase order posts.
 - 2025-06-01: Trimmed and expanded API key resolution (including Authorization headers) to reduce false 403 errors from Excel clients posting purchase orders.
+- 2025-06-02: Pointed the root-level APIs at the shared /app config and API key so database credentials and authentication stay in sync.
