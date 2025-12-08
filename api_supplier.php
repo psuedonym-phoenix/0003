@@ -2,6 +2,11 @@
 // api_supplier.php
 header('Content-Type: application/json');
 
+// Load shared configuration, DB connector, and API key so every endpoint uses the same credentials.
+require_once __DIR__ . '/app/config.php';
+require_once __DIR__ . '/app/db.php';
+require_once __DIR__ . '/app/api_key.php';
+
 // 1) Only POST allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -19,10 +24,8 @@ if (!is_array($data)) {
     exit;
 }
 
-// 3) API key check
-const API_KEY = '%h68zOewi6lqsb7aaB4!VW4bF5^fsyGCGv%mGI6QSaD5!u0FDLjLp82MIQ61VO4J';   // <-- must match what Excel / your test JSON sends
-
-if (!isset($data['api_key']) || $data['api_key'] !== API_KEY) {
+// 3) API key check (shared via /app/api_key.php)
+if (!isset($data['api_key']) || $data['api_key'] !== ApiKey) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Forbidden']);
     exit;
@@ -53,18 +56,9 @@ if ($supplier_code === '' || $supplier_name === '') {
     exit;
 }
 
-// 6) DB connection
-$dbHost = 'cp53.domains.co.za';
-$dbName = 'filiades_eems';
-$dbUser = 'filiades_eemsdbuser';
-$dbPass = 'hV&2w6JfW6@Pi3q1';  // <-- put real password here
-
-$dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4";
-
+// 6) DB connection (shared helper keeps credentials in one place)
 try {
-    $pdo = new PDO($dsn, $dbUser, $dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    $pdo = get_db_connection();
 
     // 7) Check if supplier exists
     $stmt = $pdo->prepare("
