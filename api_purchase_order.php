@@ -2,8 +2,6 @@
 // api_purchase_order.php
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/app/bootstrap_api.php';
-
 // 1) Only POST allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -22,7 +20,13 @@ if (!is_array($data)) {
 }
 
 // 3) API key
-enforce_api_key($data);
+const API_KEY = '%h68zOewi6lqsb7aaB4!VW4bF5^fsyGCGv%mGI6QSaD5!u0FDLjLp82MIQ61VO4J';  // <-- must match Excel
+
+if (!isset($data['api_key']) || $data['api_key'] !== API_KEY) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Forbidden']);
+    exit;
+}
 
 // Helper
 function get_field($arr, $key, $default = '') {
@@ -84,8 +88,17 @@ if ($order_date_raw !== '') {
 }
 
 // 5) DB connection
+$dbHost = 'cp53.domains.co.za';
+$dbName = 'filiades_eems';
+$dbUser = 'filiades_eemsdbuser';
+$dbPass = 'hV&2w6JfW6@Pi3q1'; // <-- real password
+
+$dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4";
+
 try {
-    $pdo = get_db_connection();
+    $pdo = new PDO($dsn, $dbUser, $dbPass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    ]);
 
     // 6) Lookup supplier id
     $stmt = $pdo->prepare("
