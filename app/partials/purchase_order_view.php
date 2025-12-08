@@ -128,37 +128,21 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
             </div>
 
             <div class="col-md-6">
-                <label for="supplierName" class="form-label">Supplier</label>
-                <div class="input-group">
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="supplierName"
-                        name="supplier_name"
-                        list="supplierOptions"
-                        value="<?php echo e($purchaseOrder['supplier_name'] ?? ''); ?>"
-                        required
-                    >
-                    <button
-                        class="btn btn-outline-secondary"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#supplierList"
-                        aria-expanded="false"
-                        aria-controls="supplierList"
-                        id="supplierListToggle"
-                    >
-                        Supplier list
-                    </button>
-                </div>
-                <div class="form-text">Click “Supplier list” to pick from the full catalogue or type to search.</div>
-                <datalist id="supplierOptions">
+                <label for="supplierSelect" class="form-label">Supplier</label>
+                <select class="form-select" id="supplierSelect" name="supplier_name" required>
+                    <option value="">Select a supplier</option>
                     <?php foreach ($suppliers as $supplier) : ?>
-                        <option value="<?php echo e($supplier['supplier_name'] ?? ''); ?>">
-                            <?php echo e($supplier['supplier_code'] ?? ''); ?>
+                        <?php $supplierNameOption = $supplier['supplier_name'] ?? ''; ?>
+                        <option
+                            value="<?php echo e($supplierNameOption); ?>"
+                            data-supplier-code="<?php echo e($supplier['supplier_code'] ?? ''); ?>"
+                            <?php echo $supplierNameOption === ($purchaseOrder['supplier_name'] ?? '') ? 'selected' : ''; ?>
+                        >
+                            <?php echo e($supplierNameOption); ?>
                         </option>
                     <?php endforeach; ?>
-                </datalist>
+                </select>
+                <div class="form-text">Use the dropdown to choose a supplier by name.</div>
             </div>
             <div class="col-md-3">
                 <label for="orderDate" class="form-label">Order Date</label>
@@ -234,29 +218,6 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
             </div>
         </form>
 
-        <div class="collapse mt-3" id="supplierList">
-            <div class="border rounded p-2" style="max-height: 320px; overflow-y: auto;">
-                <?php if (empty($suppliers)) : ?>
-                    <div class="text-secondary">No suppliers are available to select.</div>
-                <?php else : ?>
-                    <div class="list-group list-group-flush">
-                        <?php foreach ($suppliers as $supplier) : ?>
-                            <button
-                                type="button"
-                                class="list-group-item list-group-item-action"
-                                data-supplier-name="<?php echo e($supplier['supplier_name'] ?? ''); ?>"
-                                data-supplier-code="<?php echo e($supplier['supplier_code'] ?? ''); ?>"
-                            >
-                                <div class="fw-semibold mb-1"><?php echo e($supplier['supplier_name'] ?? ''); ?></div>
-                                <?php if (!empty($supplier['supplier_code'])) : ?>
-                                    <div class="text-secondary small">Supplier code: <?php echo e($supplier['supplier_code']); ?></div>
-                                <?php endif; ?>
-                            </button>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -368,9 +329,8 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
     (function () {
         const form = document.getElementById('poHeaderForm');
         const alertBox = document.getElementById('poUpdateAlert');
-        const supplierList = document.getElementById('supplierList');
-        const supplierNameInput = document.getElementById('supplierName');
         const supplierCodeInput = document.getElementById('supplierCode');
+        const supplierSelect = document.getElementById('supplierSelect');
 
         function showAlert(type, message) {
             if (!alertBox) {
@@ -390,24 +350,24 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
             alertBox.textContent = '';
         }
 
-        document.querySelectorAll('[data-supplier-name]').forEach((button) => {
-            button.addEventListener('click', () => {
-                if (supplierNameInput) {
-                    supplierNameInput.value = button.dataset.supplierName || '';
-                }
+        function syncSupplierCodeFromSelect() {
+            if (!supplierSelect || !supplierCodeInput) {
+                return;
+            }
 
-                if (supplierCodeInput) {
-                    supplierCodeInput.value = button.dataset.supplierCode || '';
-                }
+            const selectedOption = supplierSelect.options[supplierSelect.selectedIndex];
+            supplierCodeInput.value = selectedOption?.dataset?.supplierCode || '';
+        }
 
-                if (supplierList) {
-                    const collapse = bootstrap.Collapse.getOrCreateInstance(supplierList);
-                    collapse.hide();
-                }
-
+        if (supplierSelect) {
+            supplierSelect.addEventListener('change', () => {
+                syncSupplierCodeFromSelect();
                 showAlert('info', 'Supplier selected. Save the header to apply this change.');
             });
-        });
+
+            // Ensure the hidden supplier code matches the initial selection.
+            syncSupplierCodeFromSelect();
+        }
 
         if (form) {
             form.addEventListener('submit', async (event) => {
@@ -435,8 +395,21 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                     if (data.purchaseOrder) {
                         const updated = data.purchaseOrder;
 
-                        if (supplierNameInput && updated.supplier_name !== undefined) {
-                            supplierNameInput.value = updated.supplier_name;
+                        if (supplierSelect && updated.supplier_name !== undefined) {
+                            const matchingOption = Array.from(supplierSelect.options).find(
+                                (option) => option.value === updated.supplier_name
+                            );
+
+                            if (matchingOption) {
+                                supplierSelect.value = matchingOption.value;
+                            } else {
+                                const fallbackOption = document.createElement('option');
+                                fallbackOption.value = updated.supplier_name;
+                                fallbackOption.textContent = updated.supplier_name;
+                                fallbackOption.dataset.supplierCode = updated.supplier_code || '';
+                                supplierSelect.appendChild(fallbackOption);
+                                supplierSelect.value = updated.supplier_name;
+                            }
                         }
 
                         if (supplierCodeInput && updated.supplier_code !== undefined) {

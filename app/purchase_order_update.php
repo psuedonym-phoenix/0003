@@ -78,7 +78,7 @@ try {
 
     $poStmt = $pdo->prepare('SELECT * FROM purchase_orders WHERE id = :id LIMIT 1');
     $poStmt->execute([':id' => $purchaseOrderId]);
-    $purchaseOrder = $poStmt->fetch();
+    $purchaseOrder = $poStmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$purchaseOrder) {
         respond(404, [
@@ -99,80 +99,138 @@ try {
         ]);
     }
 
-    $updateParts = [];
-    $params = [':id' => $purchaseOrderId];
+    // Begin versioned update: insert a new header row and duplicate existing line items
+    // so history remains intact and the latest version is fully populated.
+    $pdo->beginTransaction();
 
-    if (array_key_exists('supplier_name', $purchaseOrder)) {
-        $updateParts[] = 'supplier_name = :supplier_name';
-        $params[':supplier_name'] = $supplierName;
+    $updatedOrder = $purchaseOrder;
+
+    if (array_key_exists('supplier_name', $updatedOrder)) {
+        $updatedOrder['supplier_name'] = $supplierName;
     }
 
-    if (array_key_exists('supplier_code', $purchaseOrder)) {
-        $updateParts[] = 'supplier_code = :supplier_code';
-        $params[':supplier_code'] = $supplierCode;
+    if (array_key_exists('supplier_code', $updatedOrder)) {
+        $updatedOrder['supplier_code'] = $supplierCode;
     }
 
-    if (array_key_exists('order_date', $purchaseOrder)) {
-        $updateParts[] = 'order_date = :order_date';
-        $params[':order_date'] = $orderDate;
+    if (array_key_exists('order_date', $updatedOrder)) {
+        $updatedOrder['order_date'] = $orderDate;
     }
 
-    if (array_key_exists('order_sheet_no', $purchaseOrder)) {
-        $updateParts[] = 'order_sheet_no = :order_sheet_no';
-        $params[':order_sheet_no'] = $orderSheet;
+    if (array_key_exists('order_sheet_no', $updatedOrder)) {
+        $updatedOrder['order_sheet_no'] = $orderSheet;
     }
 
-    if (array_key_exists('reference', $purchaseOrder)) {
-        $updateParts[] = 'reference = :reference';
-        $params[':reference'] = $reference;
+    if (array_key_exists('reference', $updatedOrder)) {
+        $updatedOrder['reference'] = $reference;
     }
 
-    if (array_key_exists('subtotal', $purchaseOrder)) {
-        $updateParts[] = 'subtotal = :subtotal';
-        $params[':subtotal'] = $exclusiveAmount;
+    if (array_key_exists('subtotal', $updatedOrder)) {
+        $updatedOrder['subtotal'] = $exclusiveAmount;
     }
 
-    if (array_key_exists('exclusive_amount', $purchaseOrder)) {
-        $updateParts[] = 'exclusive_amount = :exclusive_amount';
-        $params[':exclusive_amount'] = $exclusiveAmount;
+    if (array_key_exists('exclusive_amount', $updatedOrder)) {
+        $updatedOrder['exclusive_amount'] = $exclusiveAmount;
     }
 
-    if (array_key_exists('vat_percent', $purchaseOrder)) {
-        $updateParts[] = 'vat_percent = :vat_percent';
-        $params[':vat_percent'] = $vatPercent;
+    if (array_key_exists('vat_percent', $updatedOrder)) {
+        $updatedOrder['vat_percent'] = $vatPercent;
     }
 
-    if (array_key_exists('vat_amount', $purchaseOrder)) {
-        $updateParts[] = 'vat_amount = :vat_amount';
-        $params[':vat_amount'] = $vatAmount;
+    if (array_key_exists('vat_amount', $updatedOrder)) {
+        $updatedOrder['vat_amount'] = $vatAmount;
     }
 
-    if (array_key_exists('total_amount', $purchaseOrder)) {
-        $updateParts[] = 'total_amount = :total_amount';
-        $params[':total_amount'] = $totalAmount;
+    if (array_key_exists('total_amount', $updatedOrder)) {
+        $updatedOrder['total_amount'] = $totalAmount;
     }
 
-    if (empty($updateParts)) {
-        respond(400, [
-            'success' => false,
-            'message' => 'No editable columns were detected for this purchase order.',
-        ]);
+    // Preserve the original order type/line type information regardless of input.
+    foreach (['po_type', 'order_type', 'line_type'] as $typeField) {
+        if (array_key_exists($typeField, $purchaseOrder)) {
+            $updatedOrder[$typeField] = $purchaseOrder[$typeField];
+        }
     }
 
-    $updateSql = 'UPDATE purchase_orders SET ' . implode(', ', $updateParts) . ' WHERE id = :id';
-    $updateStmt = $pdo->prepare($updateSql);
-    $updateStmt->execute($params);
+    // Refresh the uploaded timestamp so users can see when the latest version was saved.
+    $updatedOrder['created_at'] = date('Y-m-d H:i:s');
+
+    // Remove the primary key before inserting the new version row.
+    unset($updatedOrder['id']);
+
+    $columns = array_keys($updatedOrder);
+    $placeholders = array_map(static function ($column) {
+        return ':' . $column;
+    }, $columns);
+
+    $insertSql = 'INSERT INTO purchase_orders (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+    $insertStmt = $pdo->prepare($insertSql);
+
+    $insertParams = [];
+    foreach ($columns as $column) {
+        $insertParams[':' . $column] = $updatedOrder[$column];
+    }
+
+    $insertStmt->execute($insertParams);
+    $newPurchaseOrderId = (int) $pdo->lastInsertId();
+
+    // Duplicate the existing lines so the new header version carries the same detail rows.
+    $linesStmt = $pdo->prepare(
+        'SELECT * FROM purchase_order_lines WHERE purchase_order_id = :purchase_order_id ORDER BY line_no ASC, id ASC'
+    );
+    $linesStmt->execute([':purchase_order_id' => $purchaseOrderId]);
+    $existingLines = $linesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($existingLines)) {
+        $lineColumns = array_keys($existingLines[0]);
+        $lineColumns = array_values(array_filter($lineColumns, static function ($column) {
+            return $column !== 'id';
+        }));
+
+        $linePlaceholders = array_map(static function ($column) {
+            return ':' . $column;
+        }, $lineColumns);
+
+        $lineInsertSql = 'INSERT INTO purchase_order_lines (' . implode(', ', $lineColumns) . ')
+            VALUES (' . implode(', ', $linePlaceholders) . ')';
+        $lineInsertStmt = $pdo->prepare($lineInsertSql);
+
+        foreach ($existingLines as $line) {
+            $line['purchase_order_id'] = $newPurchaseOrderId;
+
+            if (array_key_exists('supplier_name', $line)) {
+                $line['supplier_name'] = $supplierName;
+            }
+
+            if (array_key_exists('supplier_code', $line)) {
+                $line['supplier_code'] = $supplierCode;
+            }
+
+            $lineParams = [];
+            foreach ($lineColumns as $column) {
+                $lineParams[':' . $column] = $line[$column] ?? null;
+            }
+
+            $lineInsertStmt->execute($lineParams);
+        }
+    }
+
+    $pdo->commit();
 
     $refreshStmt = $pdo->prepare('SELECT * FROM purchase_orders WHERE id = :id LIMIT 1');
-    $refreshStmt->execute([':id' => $purchaseOrderId]);
-    $updatedOrder = $refreshStmt->fetch();
+    $refreshStmt->execute([':id' => $newPurchaseOrderId]);
+    $latestOrder = $refreshStmt->fetch(PDO::FETCH_ASSOC);
 
     respond(200, [
         'success' => true,
-        'message' => 'Purchase order header updated successfully.',
-        'purchaseOrder' => $updatedOrder,
+        'message' => 'Purchase order header updated successfully. Line items were copied to the latest version.',
+        'purchaseOrder' => $latestOrder,
     ]);
 } catch (Throwable $exception) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
     respond(500, [
         'success' => false,
         'message' => 'Unexpected error while updating the purchase order. Please try again.',

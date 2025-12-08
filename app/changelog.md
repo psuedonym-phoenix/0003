@@ -50,3 +50,4 @@ l view.
 - 2025-05-23: Calculated Total Amount (Lines) by adding VAT to standard line net prices when the VATable flag allows it.
 - 2025-12-06: Added editable purchase order header form with supplier catalogue selection and a secured update endpoint.
 - 2025-05-27: Displayed purchase order version counts in the listing to show how many uploads exist per PO number.
+- 2025-05-28: Saving a purchase order header now creates a new version with duplicated line items and a supplier dropdown that lists supplier names.
