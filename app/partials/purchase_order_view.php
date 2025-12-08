@@ -256,15 +256,14 @@
 			<div class="row mb-1">
 				<div class="col-sm-9"></div>
 				<label for="exclusiveAmount" class="col-sm-1 col-form-label text-end">Exclusive</label>
-				<div class="col-sm-2 d-flex flex-column gap-2">
-					<input
-					type="number"
-					step="0.01"
-					class="form-control text-end"
-					id="exclusiveAmount"
-					name="exclusive_amount"
-					value="<?php echo number_format($exclusiveAmount, 2, '.', ''); ?>">
-				</div>
+                                <div class="col-sm-2 d-flex flex-column gap-2">
+                                        <input
+                                        type="text"
+                                        class="form-control text-end font-monospace"
+                                        id="exclusiveAmount"
+                                        name="exclusive_amount"
+                                        value="<?php echo number_format($exclusiveAmount, 2, '.', ''); ?>">
+                                </div>
 				
 			</div>
 			<div class="row mb-1">
@@ -281,45 +280,43 @@
 					value="<?php echo number_format($vatPercent, 2, '.', ''); ?>"
 					>
 				</div>
-				<div class="col-sm-2 d-flex flex-column gap-2">
-					<input
-					type="number"
-					step="0.01"
-					class="form-control text-end"
-					id="vatAmount"
-					name="vat_amount"
-					value="<?php echo number_format($vatAmount, 2, '.', ''); ?>"
-					>
-				</div>	
+                                <div class="col-sm-2 d-flex flex-column gap-2">
+                                        <input
+                                        type="text"
+                                        class="form-control text-end font-monospace"
+                                        id="vatAmount"
+                                        name="vat_amount"
+                                        value="<?php echo number_format($vatAmount, 2, '.', ''); ?>"
+                                        >
+                                </div>
 			</div>
 			<div class="row mb-1">
 				<div class="col-sm-9"></div>
 				
 				
 				<label for="totalAmount" class="col-sm-1 col-form-label text-end">Inclusive</label>
-				<div class="col-sm-2 d-flex flex-column gap-2">
-					<input
-					type="number"
-					step="0.01"
-					class="form-control text-end"
-					id="totalAmount"
-					name="total_amount"
-					value="<?php echo number_format($inclusiveAmount, 2, '.', ''); ?>"
-					>
-					
-				</div>
+                                <div class="col-sm-2 d-flex flex-column gap-2">
+                                        <input
+                                        type="text"
+                                        class="form-control text-end font-monospace"
+                                        id="totalAmount"
+                                        name="total_amount"
+                                        value="<?php echo number_format($inclusiveAmount, 2, '.', ''); ?>"
+                                        >
+
+                                </div>
 			</div>
 			<div class="row mb-1">
 				<div class="col-sm-9"></div>
 				<label class="col-sm-1">Total Amount</label>
-				<div class="col-sm-2 d-flex flex-column gap-2">
-					<input
-					type="text"
-					class="form-control text-end"
-					value="R <?php echo number_format($calculatedLineTotal, 2); ?>"
-					readonly
-					>
-				</div>
+                                <div class="col-sm-2 d-flex flex-column gap-2">
+                                        <input
+                                        type="text"
+                                        class="form-control text-end font-monospace"
+                                        value="R <?php echo number_format($calculatedLineTotal, 2); ?>"
+                                        readonly
+                                        >
+                                </div>
 			</div>
 			<div class="row mb-3">
 				<div class="col-sm-11"></div>
