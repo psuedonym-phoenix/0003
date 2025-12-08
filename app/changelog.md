@@ -68,3 +68,4 @@ l view.
 - 2025-12-08: Formatted purchase order amounts with space-separated thousands and highlighted the calculated total when it matches the inclusive amount.
 - 2026-07-12: Normalised purchase order header amount parsing to accept formatted numbers when saving edits.
 - 2026-07-13: Enabled editable standard purchase order lines with monospaced inputs, live totals, add-line controls, and a secured update endpoint that versions updates.
+- 2026-07-14: Rounded purchase order header and calculated line totals to 2 decimals so inclusive amount validation highlights remain stable.

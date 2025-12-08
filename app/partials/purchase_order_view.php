@@ -12,6 +12,14 @@
         }
 
         /**
+         * Round currency values to 2 decimal places so comparisons align with stored amounts.
+         */
+        function round_currency(float $amount): float
+        {
+                return round($amount, 2);
+        }
+
+        /**
          * Format currency values with a space as the thousands separator.
          */
         function format_amount(float $amount): string
@@ -74,14 +82,14 @@
     ? 'Back to Line Entry Enquiry'
     : 'Back to Purchase Orders';
 	
-	// Normalise key financial amounts so the view can show consistent figures
-	// regardless of whether older columns like exclusive_amount are still present.
-	$exclusiveAmount = (float) ($purchaseOrder['subtotal'] ?? $purchaseOrder['exclusive_amount'] ?? 0);
-        $inclusiveAmount = (float) ($purchaseOrder['total_amount'] ?? 0);
+        // Normalise key financial amounts so the view can show consistent figures
+        // regardless of whether older columns like exclusive_amount are still present.
+        $exclusiveAmount = round_currency((float) ($purchaseOrder['subtotal'] ?? $purchaseOrder['exclusive_amount'] ?? 0));
+        $inclusiveAmount = round_currency((float) ($purchaseOrder['total_amount'] ?? 0));
         $vatPercent = (float) ($purchaseOrder['vat_percent'] ?? 0);
-        $vatAmount = (float) ($purchaseOrder['vat_amount'] ?? 0);
-        $calculatedLineTotal = (float) ($lineSummary['sum'] ?? 0);
-        $amountsMatch = abs($inclusiveAmount - $calculatedLineTotal) < 0.005;
+        $vatAmount = round_currency((float) ($purchaseOrder['vat_amount'] ?? 0));
+        $calculatedLineTotal = round_currency((float) ($lineSummary['sum'] ?? 0));
+        $amountsMatch = round_currency($inclusiveAmount) === round_currency($calculatedLineTotal);
         $totalHighlightClass = $amountsMatch ? 'bg-success-subtle' : 'bg-danger-subtle';
 	
 	// Convert order date to an ISO value the date picker can render.
