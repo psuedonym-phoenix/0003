@@ -20,6 +20,14 @@
         }
 
         /**
+         * Compare two currency values using rounded cents to avoid precision drift.
+         */
+        function amounts_match(float $amountA, float $amountB): bool
+        {
+                return round_currency($amountA) === round_currency($amountB);
+        }
+
+        /**
          * Format currency values with a space as the thousands separator.
          */
         function format_amount(float $amount): string
@@ -89,7 +97,7 @@
         $vatPercent = (float) ($purchaseOrder['vat_percent'] ?? 0);
         $vatAmount = round_currency((float) ($purchaseOrder['vat_amount'] ?? 0));
         $calculatedLineTotal = round_currency((float) ($lineSummary['sum'] ?? 0));
-        $amountsMatch = round_currency($inclusiveAmount) === round_currency($calculatedLineTotal);
+        $amountsMatch = amounts_match($inclusiveAmount, $calculatedLineTotal);
         $totalHighlightClass = $amountsMatch ? 'bg-success-subtle' : 'bg-danger-subtle';
 	
 	// Convert order date to an ISO value the date picker can render.
@@ -411,8 +419,9 @@
                                                         <td class="text-end"><?php echo number_format((float) ($line['deposit_amount'] ?? 0), 2); ?></td>
                                                         <td class="text-end"><?php echo number_format((float) ($line['ex_vat_amount'] ?? 0), 2); ?></td>
                                                         <td class="text-end"><?php echo number_format((float) ($line['line_vat_amount'] ?? 0), 2); ?></td>
-                                                        <?php $runningTotal += (float) ($line['line_total_amount'] ?? 0); ?>
-                                                        <td class="text-end"><?php echo number_format((float) ($line['line_total_amount'] ?? 0), 2); ?></td>
+                                                        <?php $lineTotalAmount = round_currency((float) ($line['line_total_amount'] ?? 0)); ?>
+                                                        <?php $runningTotal = round_currency($runningTotal + $lineTotalAmount); ?>
+                                                        <td class="text-end"><?php echo number_format($lineTotalAmount, 2); ?></td>
                                                         <td class="text-end fw-semibold"><?php echo number_format($runningTotal, 2); ?></td>
                                                         <td class="text-center">
                                                                 <input
@@ -430,8 +439,9 @@
                                                         <td><input type="text" class="form-control form-control-sm line-unit" value="<?php echo e($line['unit'] ?? ''); ?>" /></td>
                                                         <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
-                                                        <?php $runningTotal += (float) ($line['net_price'] ?? 0); ?>
-                                                        <td class="text-end"><input type="text" class="form-control form-control-sm text-end line-net-price" value="<?php echo number_format((float) ($line['net_price'] ?? 0), 2, '.', ''); ?>" readonly /></td>
+                                                        <?php $lineNetPrice = round_currency((float) ($line['net_price'] ?? 0)); ?>
+                                                        <?php $runningTotal = round_currency($runningTotal + $lineNetPrice); ?>
+                                                        <td class="text-end"><input type="text" class="form-control form-control-sm text-end line-net-price" value="<?php echo number_format($lineNetPrice, 2, '.', ''); ?>" readonly /></td>
                                                         <td class="text-end fw-semibold running-total-cell"><?php echo number_format($runningTotal, 2); ?></td>
                                                         <td class="text-center">
                                                                 <input
@@ -676,6 +686,13 @@
                         }
 
                         /**
+                         * Round a numeric value to 2 decimals to keep currency maths stable.
+                         */
+                        function roundCurrency(value) {
+                                return Math.round((Number(value) || 0) * 100) / 100;
+                        }
+
+                        /**
                          * Calculate the net price for a line using the requested formula.
                          */
                         function calculateNetPrice(quantity, unitPrice, discountPercent) {
@@ -702,18 +719,18 @@
                                 let runningTotal = 0;
                                 let exclusiveSum = 0;
                                 let vatSum = 0;
-                                const vatRate = toNumber(vatPercentInput ? vatPercentInput.value : 0) / 100;
+                                const vatRate = roundCurrency(toNumber(vatPercentInput ? vatPercentInput.value : 0) / 100);
 
                                 rows.forEach((row) => {
                                         const netInput = row.querySelector('.line-net-price');
                                         const runningCell = row.querySelector('.running-total-cell');
                                         const vatableCheckbox = row.querySelector('.line-vatable');
-                                        const netAmount = netInput ? toNumber(netInput.value) : 0;
+                                        const netAmount = roundCurrency(netInput ? toNumber(netInput.value) : 0);
                                         const isVatable = vatableCheckbox ? vatableCheckbox.checked : true;
 
-                                        exclusiveSum += netAmount;
-                                        vatSum += isVatable ? netAmount * vatRate : 0;
-                                        runningTotal += netAmount;
+                                        exclusiveSum = roundCurrency(exclusiveSum + netAmount);
+                                        vatSum = roundCurrency(vatSum + (isVatable ? netAmount * vatRate : 0));
+                                        runningTotal = roundCurrency(runningTotal + netAmount);
 
                                         if (runningCell) {
                                                 runningCell.textContent = formatCurrency(runningTotal);
