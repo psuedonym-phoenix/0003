@@ -49,3 +49,4 @@ l view.
 - 2025-05-22: Displayed the VATable flag for each purchase order line with a default tick when VAT applies at the purchase order level.
 - 2025-05-23: Calculated Total Amount (Lines) by adding VAT to standard line net prices when the VATable flag allows it.
 - 2025-12-06: Added editable purchase order header form with supplier catalogue selection and a secured update endpoint.
+- 2025-05-27: Displayed purchase order version counts in the listing to show how many uploads exist per PO number.

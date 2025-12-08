@@ -70,6 +70,7 @@ $currentPage = max(1, (int) ($_GET['page'] ?? 1));
 $supplierFilter = trim($_GET['supplier'] ?? '');
 
 $latestPerPoSubquery = 'SELECT po_number, MAX(id) AS latest_id FROM purchase_orders GROUP BY po_number';
+$versionCountSubquery = 'SELECT po_number, COUNT(*) AS version_count FROM purchase_orders GROUP BY po_number';
 
 // Count total unique purchase orders so we can paginate results cleanly.
 $countQuery =
@@ -79,9 +80,10 @@ $countQuery =
 
 // Fetch the latest version for each purchase order number and support filtering by order book.
 $orderQuery =
-    "SELECT po.id, po.po_number, po.order_book, po.supplier_name, po.order_date, po.total_amount, po.created_at
+    "SELECT po.id, po.po_number, po.order_book, po.supplier_name, po.order_date, po.total_amount, po.created_at, versions.version_count
      FROM purchase_orders po
-     INNER JOIN ($latestPerPoSubquery) latest ON latest.po_number = po.po_number AND latest.latest_id = po.id";
+     INNER JOIN ($latestPerPoSubquery) latest ON latest.po_number = po.po_number AND latest.latest_id = po.id
+     INNER JOIN ($versionCountSubquery) versions ON versions.po_number = po.po_number";
 
 $filters = [];
 
@@ -276,6 +278,11 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                             </button>
                         </th>
                         <th scope="col">
+                            <button type="button" class="sortable-header" data-sort-key="version_count" data-sort-type="number">
+                                Versions
+                            </button>
+                        </th>
+                        <th scope="col">
                             <button type="button" class="sortable-header" data-sort-key="supplier_name">
                                 Supplier
                             </button>
@@ -301,7 +308,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                 <tbody>
                     <?php if (empty($orders)) : ?>
                         <tr>
-                            <td colspan="6" class="text-secondary">No purchase orders were found for the current selection.</td>
+                            <td colspan="7" class="text-secondary">No purchase orders were found for the current selection.</td>
                         </tr>
                     <?php else : ?>
                         <?php foreach ($orders as $order) : ?>
@@ -309,10 +316,12 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
                                 data-po-number="<?php echo e($order['po_number']); ?>"
                                 data-order-date="<?php echo e($order['order_date']); ?>"
                                 data-total-amount="<?php echo e($order['total_amount']); ?>"
+                                data-version-count="<?php echo (int) $order['version_count']; ?>"
                                 data-supplier-name="<?php echo e($order['supplier_name']); ?>"
                                 data-created-at="<?php echo e($order['created_at']); ?>"
                             >
                                 <td class="fw-semibold"><?php echo e($order['po_number']); ?></td>
+                                <td><?php echo number_format((int) $order['version_count']); ?></td>
                                 <td><?php echo e($order['supplier_name']); ?></td>
                                 <td><?php echo e($order['order_date']); ?></td>
                                 <td class="text-end"><?php echo number_format((float) $order['total_amount'], 2); ?></td>
@@ -545,7 +554,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
 
         if (rows.length === 0) {
             const emptyRow = document.createElement('tr');
-            emptyRow.innerHTML = '<td colspan="6" class="text-secondary">No purchase orders match the current filters.</td>';
+            emptyRow.innerHTML = '<td colspan="7" class="text-secondary">No purchase orders match the current filters.</td>';
             tableBody.appendChild(emptyRow);
             return;
         }
