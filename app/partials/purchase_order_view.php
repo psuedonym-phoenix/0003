@@ -12,12 +12,16 @@
         }
 
         /**
-         * Return the first available purchase order value from a list of possible column names.
-         * This keeps the view resilient to legacy/variant supplier column naming without raising notices.
+         * Return the first available value from the supplier master data or purchase order fallback fields.
+         * Supplier data is preferred so the view shows the latest address and contact details.
          */
-        function get_purchase_order_field(array $purchaseOrder, array $keys): string
+        function get_supplier_field(array $supplierDetails, array $purchaseOrder, array $keys): string
         {
                 foreach ($keys as $key) {
+                        if (array_key_exists($key, $supplierDetails) && trim((string) $supplierDetails[$key]) !== '') {
+                                return (string) $supplierDetails[$key];
+                        }
+
                         if (array_key_exists($key, $purchaseOrder)) {
                                 return (string) ($purchaseOrder[$key] ?? '');
                         }
@@ -46,16 +50,17 @@
 	$returnParams = $viewData['returnParams'];
         $lineSummary = $viewData['lineSummary'];
         $suppliers = $viewData['suppliers'];
+        $supplierDetails = $viewData['supplierDetails'] ?? [];
         $supplierContact = [
-                'address1' => get_purchase_order_field($purchaseOrder, ['address_line1']),
-                'address2' => get_purchase_order_field($purchaseOrder, ['address_line2']),
-                'address3' => get_purchase_order_field($purchaseOrder, ['address_line3']),
-                'address4' => get_purchase_order_field($purchaseOrder, ['address_line4']),
-                'telephone' => get_purchase_order_field($purchaseOrder, ['telephone_no', 'telephone_number']),
-                'fax' => get_purchase_order_field($purchaseOrder, ['fax_no', 'fax_number']),
-                'contact_name' => get_purchase_order_field($purchaseOrder, ['Contact_Person', 'contact_person']),
-                'contact_number' => get_purchase_order_field($purchaseOrder, ['contact_person_no', 'contact_person_number', 'Contact_Person_No']),
-                'contact_email' => get_purchase_order_field($purchaseOrder, ['contact_email']),
+                'address1' => get_supplier_field($supplierDetails, $purchaseOrder, ['address_line1']),
+                'address2' => get_supplier_field($supplierDetails, $purchaseOrder, ['address_line2']),
+                'address3' => get_supplier_field($supplierDetails, $purchaseOrder, ['address_line3']),
+                'address4' => get_supplier_field($supplierDetails, $purchaseOrder, ['address_line4']),
+                'telephone' => get_supplier_field($supplierDetails, $purchaseOrder, ['telephone_no', 'telephone_number']),
+                'fax' => get_supplier_field($supplierDetails, $purchaseOrder, ['fax_no', 'fax_number']),
+                'contact_name' => get_supplier_field($supplierDetails, $purchaseOrder, ['Contact_Person', 'contact_person']),
+                'contact_number' => get_supplier_field($supplierDetails, $purchaseOrder, ['contact_person_no', 'contact_person_number', 'Contact_Person_No']),
+                'contact_email' => get_supplier_field($supplierDetails, $purchaseOrder, ['contact_email']),
         ];
         $returnViewLabel = ($returnParams['view'] ?? 'purchase_orders') === 'line_entry_enquiry'
     ? 'Back to Line Entry Enquiry'
