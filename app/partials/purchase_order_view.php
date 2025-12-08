@@ -702,7 +702,7 @@
                                 let runningTotal = 0;
                                 let exclusiveSum = 0;
                                 let vatSum = 0;
-                                const vatRate = toNumber(vatPercentInput ? vatPercentInput.value : 0) / 100;
+                                const vatRate = toNumber(vatPercentInput ? vatPercentInput.value : 0);
 
                                 rows.forEach((row) => {
                                         const netInput = row.querySelector('.line-net-price');
