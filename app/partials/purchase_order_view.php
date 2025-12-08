@@ -354,11 +354,11 @@
 				<span class="badge text-bg-light border">Total lines: <?php echo count($lineItems); ?></span>
 			</div>
 			
-			<div class="table-responsive">
-				<table class="table table-sm align-middle mb-0">
-					<thead class="table-light">
-						<tr>
-							<th scope="col">Line #</th>
+                        <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0" id="poLineTable" data-po-type="<?php echo e($poType); ?>">
+                                        <thead class="table-light">
+                                                <tr>
+                                                        <th scope="col">Line #</th>
 							<?php if ($poType === 'transactional') : ?>
 							<th scope="col">Date</th>
 							<th scope="col">Description</th>
@@ -388,61 +388,66 @@
 						</tr>
 						<?php else : ?>
 						<?php $runningTotal = 0.0; ?>
-						<?php foreach ($lineItems as $line) : ?>
-						<?php
-							// If the VAT flag is missing, default to the purchase order VAT percentage being applied.
-							$lineIsVatable = ($line['is_vatable'] ?? null) === null
-							? $vatPercent > 0
-							: ((int) $line['is_vatable'] === 1);
-						?>
-						<tr>
-							<td class="fw-semibold"><?php echo e((string) ($line['line_no'] ?? '')); ?></td>
-							<?php if ($poType === 'transactional') : ?>
-							<td><?php echo e($line['line_date'] ?? ''); ?></td>
-							<td><?php echo e($line['description'] ?? ''); ?></td>
-							<td class="text-end"><?php echo number_format((float) ($line['deposit_amount'] ?? 0), 2); ?></td>
-							<td class="text-end"><?php echo number_format((float) ($line['ex_vat_amount'] ?? 0), 2); ?></td>
-							<td class="text-end"><?php echo number_format((float) ($line['line_vat_amount'] ?? 0), 2); ?></td>
-							<?php $runningTotal += (float) ($line['line_total_amount'] ?? 0); ?>
-							<td class="text-end"><?php echo number_format((float) ($line['line_total_amount'] ?? 0), 2); ?></td>
-							<td class="text-end fw-semibold"><?php echo number_format($runningTotal, 2); ?></td>
-							<td class="text-center">
-								<input
-								type="checkbox"
-								class="form-check-input position-static"
-								disabled
-								<?php echo $lineIsVatable ? 'checked' : ''; ?>
-								aria-label="VATable"
-								/>
-							</td>
-							<?php else : ?>
-							<td><?php echo e($line['item_code'] ?? ''); ?></td>
-							<td><?php echo e($line['description'] ?? ''); ?></td>
-							<td class="text-end"><?php echo number_format((float) ($line['quantity'] ?? 0), 2); ?></td>
-							<td><?php echo e($line['unit'] ?? ''); ?></td>
-							<td class="text-end"><?php echo number_format((float) ($line['unit_price'] ?? 0), 2); ?></td>
-							<td class="text-end"><?php echo number_format((float) ($line['discount_percent'] ?? 0), 2); ?></td>
-							<?php $runningTotal += (float) ($line['net_price'] ?? 0); ?>
-							<td class="text-end"><?php echo number_format((float) ($line['net_price'] ?? 0), 2); ?></td>
-							<td class="text-end fw-semibold"><?php echo number_format($runningTotal, 2); ?></td>
-							<td class="text-center">
-								<input
-								type="checkbox"
-								class="form-check-input position-static"
-								disabled
-								<?php echo $lineIsVatable ? 'checked' : ''; ?>
-								aria-label="VATable"
-								/>
-							</td>
-							<?php endif; ?>
-						</tr>
-						<?php endforeach; ?>
-						<?php endif; ?>
-					</tbody>
-				</table>
-			</div>
-		</div>
-	</div>
+                                                <?php foreach ($lineItems as $line) : ?>
+                                                <?php
+                                                        // If the VAT flag is missing, default to the purchase order VAT percentage being applied.
+                                                        $lineIsVatable = ($line['is_vatable'] ?? null) === null
+                                                        ? $vatPercent > 0
+                                                        : ((int) $line['is_vatable'] === 1);
+                                                ?>
+                                                <tr class="<?php echo $poType === 'transactional' ? '' : 'font-monospace'; ?>" data-line-no="<?php echo e($line['line_no'] ?? ''); ?>">
+                                                        <td class="fw-semibold"><?php echo e((string) ($line['line_no'] ?? '')); ?></td>
+                                                        <?php if ($poType === 'transactional') : ?>
+                                                        <td><?php echo e($line['line_date'] ?? ''); ?></td>
+                                                        <td><?php echo e($line['description'] ?? ''); ?></td>
+                                                        <td class="text-end"><?php echo number_format((float) ($line['deposit_amount'] ?? 0), 2); ?></td>
+                                                        <td class="text-end"><?php echo number_format((float) ($line['ex_vat_amount'] ?? 0), 2); ?></td>
+                                                        <td class="text-end"><?php echo number_format((float) ($line['line_vat_amount'] ?? 0), 2); ?></td>
+                                                        <?php $runningTotal += (float) ($line['line_total_amount'] ?? 0); ?>
+                                                        <td class="text-end"><?php echo number_format((float) ($line['line_total_amount'] ?? 0), 2); ?></td>
+                                                        <td class="text-end fw-semibold"><?php echo number_format($runningTotal, 2); ?></td>
+                                                        <td class="text-center">
+                                                                <input
+                                                                type="checkbox"
+                                                                class="form-check-input position-static"
+                                                                disabled
+                                                                <?php echo $lineIsVatable ? 'checked' : ''; ?>
+                                                                aria-label="VATable"
+                                                                />
+                                                        </td>
+                                                        <?php else : ?>
+                                                        <td><input type="text" class="form-control form-control-sm line-item-code" value="<?php echo e($line['item_code'] ?? ''); ?>" /></td>
+                                                        <td><input type="text" class="form-control form-control-sm line-description" value="<?php echo e($line['description'] ?? ''); ?>" /></td>
+                                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-quantity" value="<?php echo number_format((float) ($line['quantity'] ?? 0), 2, '.', ''); ?>" /></td>
+                                                        <td><input type="text" class="form-control form-control-sm line-unit" value="<?php echo e($line['unit'] ?? ''); ?>" /></td>
+                                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
+                                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
+                                                        <?php $runningTotal += (float) ($line['net_price'] ?? 0); ?>
+                                                        <td class="text-end"><input type="text" class="form-control form-control-sm text-end line-net-price" value="<?php echo number_format((float) ($line['net_price'] ?? 0), 2, '.', ''); ?>" readonly /></td>
+                                                        <td class="text-end fw-semibold running-total-cell"><?php echo number_format($runningTotal, 2); ?></td>
+                                                        <td class="text-center">
+                                                                <input
+                                                                type="checkbox"
+                                                                class="form-check-input position-static line-vatable"
+                                                                <?php echo $lineIsVatable ? 'checked' : ''; ?>
+                                                                aria-label="VATable"
+                                                                />
+                                                        </td>
+                                                        <?php endif; ?>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                                <?php endif; ?>
+                                        </tbody>
+                                </table>
+                        </div>
+                        <?php if ($poType !== 'transactional') : ?>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                <button type="button" class="btn btn-outline-primary" id="addLineButton">Add line</button>
+                                <button type="button" class="btn btn-primary" id="saveLinesButton">Save lines</button>
+                        </div>
+                        <?php endif; ?>
+                </div>
+        </div>
 	
 	
 <script>
@@ -640,6 +645,214 @@
                                         showAlert('danger', error.message);
                                 }
                         });
+                }
+
+                // Line editing is only enabled for standard purchase orders.
+                const poLineTable = document.getElementById('poLineTable');
+
+                if (poLineTable && poLineTable.dataset.poType !== 'transactional') {
+                        const vatPercentInput = document.getElementById('vatPercent');
+                        const exclusiveAmountInput = document.getElementById('exclusiveAmount');
+                        const vatAmountInput = document.getElementById('vatAmount');
+                        const totalAmountInput = document.getElementById('totalAmount');
+                        const addLineButton = document.getElementById('addLineButton');
+                        const saveLinesButton = document.getElementById('saveLinesButton');
+                        const purchaseOrderId = <?php echo (int) $purchaseOrder['id']; ?>;
+
+                        /**
+                         * Parse a numeric string safely, returning 0 when invalid.
+                         */
+                        function toNumber(value) {
+                                const parsed = parseFloat(String(value).replace(/[,\s]/g, ''));
+                                return Number.isFinite(parsed) ? parsed : 0;
+                        }
+
+                        /**
+                         * Calculate the net price for a line using the requested formula.
+                         */
+                        function calculateNetPrice(quantity, unitPrice, discountPercent) {
+                                const qty = Math.max(0, quantity);
+                                const price = Math.max(0, unitPrice);
+                                const discount = Math.max(0, discountPercent);
+                                const discountMultiplier = 1 - discount / 100;
+
+                                return qty * price * discountMultiplier;
+                        }
+
+                        /**
+                         * Normalise displayed currency values so users can see running totals update cleanly.
+                         */
+                        function formatCurrency(value) {
+                                return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        }
+
+                        /**
+                         * Update the running totals across all editable rows and refresh the header amounts.
+                         */
+                        function refreshRunningTotals() {
+                                const rows = Array.from(poLineTable.querySelectorAll('tbody tr'));
+                                let runningTotal = 0;
+                                let exclusiveSum = 0;
+                                let vatSum = 0;
+                                const vatRate = toNumber(vatPercentInput ? vatPercentInput.value : 0) / 100;
+
+                                rows.forEach((row) => {
+                                        const netInput = row.querySelector('.line-net-price');
+                                        const runningCell = row.querySelector('.running-total-cell');
+                                        const vatableCheckbox = row.querySelector('.line-vatable');
+                                        const netAmount = netInput ? toNumber(netInput.value) : 0;
+                                        const isVatable = vatableCheckbox ? vatableCheckbox.checked : true;
+
+                                        exclusiveSum += netAmount;
+                                        vatSum += isVatable ? netAmount * vatRate : 0;
+                                        runningTotal += netAmount;
+
+                                        if (runningCell) {
+                                                runningCell.textContent = formatCurrency(runningTotal);
+                                        }
+                                });
+
+                                if (exclusiveAmountInput) {
+                                        exclusiveAmountInput.value = formatCurrency(exclusiveSum);
+                                }
+
+                                if (vatAmountInput) {
+                                        vatAmountInput.value = formatCurrency(vatSum);
+                                }
+
+                                if (totalAmountInput) {
+                                        totalAmountInput.value = formatCurrency(exclusiveSum + vatSum);
+                                }
+                        }
+
+                        /**
+                         * Recalculate the net price for a row when the user exits the row.
+                         */
+                        function recalculateRow(row) {
+                                const quantityInput = row.querySelector('.line-quantity');
+                                const unitPriceInput = row.querySelector('.line-unit-price');
+                                const discountInput = row.querySelector('.line-discount');
+                                const netPriceInput = row.querySelector('.line-net-price');
+
+                                if (!quantityInput || !unitPriceInput || !discountInput || !netPriceInput) {
+                                        return;
+                                }
+
+                                const quantity = toNumber(quantityInput.value);
+                                const unitPrice = toNumber(unitPriceInput.value);
+                                const discount = toNumber(discountInput.value);
+                                const netPrice = calculateNetPrice(quantity, unitPrice, discount);
+
+                                netPriceInput.value = netPrice.toFixed(2);
+                        }
+
+                        poLineTable.addEventListener('focusout', (event) => {
+                                const row = event.target.closest('tr');
+
+                                if (!row || !poLineTable.contains(row)) {
+                                        return;
+                                }
+
+                                const related = event.relatedTarget;
+                                const stillInsideRow = related instanceof HTMLElement && row.contains(related);
+
+                                if (!stillInsideRow) {
+                                        recalculateRow(row);
+                                        refreshRunningTotals();
+                                }
+                        });
+
+                        poLineTable.addEventListener('input', (event) => {
+                                if (event.target.classList.contains('line-vatable')) {
+                                        refreshRunningTotals();
+                                }
+                        });
+
+                        function buildEditableRow(lineNumber) {
+                                const template = document.createElement('tr');
+                                template.className = 'font-monospace';
+                                template.innerHTML = `
+                                        <td class="fw-semibold">${lineNumber}</td>
+                                        <td><input type="text" class="form-control form-control-sm line-item-code" value="" /></td>
+                                        <td><input type="text" class="form-control form-control-sm line-description" value="" /></td>
+                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-quantity" value="0.00" /></td>
+                                        <td><input type="text" class="form-control form-control-sm line-unit" value="" /></td>
+                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
+                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="0.00" /></td>
+                                        <td class="text-end"><input type="text" class="form-control form-control-sm text-end line-net-price" value="0.00" readonly /></td>
+                                        <td class="text-end fw-semibold running-total-cell">0.00</td>
+                                        <td class="text-center"><input type="checkbox" class="form-check-input position-static line-vatable" checked aria-label="VATable" /></td>
+                                `;
+
+                                return template;
+                        }
+
+                        if (addLineButton) {
+                                addLineButton.addEventListener('click', () => {
+                                        const tbody = poLineTable.querySelector('tbody');
+                                        if (!tbody) {
+                                                return;
+                                        }
+
+                                        const nextLineNumber = tbody.children.length + 1;
+                                        const newRow = buildEditableRow(nextLineNumber);
+                                        tbody.appendChild(newRow);
+                                });
+                        }
+
+                        function collectLines() {
+                                const rows = Array.from(poLineTable.querySelectorAll('tbody tr'));
+
+                                return rows.map((row, index) => ({
+                                        line_no: index + 1,
+                                        item_code: (row.querySelector('.line-item-code')?.value || '').trim(),
+                                        description: (row.querySelector('.line-description')?.value || '').trim(),
+                                        quantity: toNumber(row.querySelector('.line-quantity')?.value || 0),
+                                        unit: (row.querySelector('.line-unit')?.value || '').trim(),
+                                        unit_price: toNumber(row.querySelector('.line-unit-price')?.value || 0),
+                                        discount_percent: toNumber(row.querySelector('.line-discount')?.value || 0),
+                                        is_vatable: row.querySelector('.line-vatable')?.checked !== false,
+                                }));
+                        }
+
+                        async function saveLines() {
+                                clearAlert();
+                                const lines = collectLines();
+                                // Make sure the latest net prices are stored before sending to the server.
+                                poLineTable.querySelectorAll('tbody tr').forEach(recalculateRow);
+                                refreshRunningTotals();
+
+                                const vatPercent = toNumber(vatPercentInput ? vatPercentInput.value : 0);
+                                const payload = new FormData();
+                                payload.set('purchase_order_id', String(purchaseOrderId));
+                                payload.set('vat_percent', String(vatPercent));
+                                payload.set('lines', JSON.stringify(lines));
+
+                                try {
+                                        showAlert('info', 'Saving line changes...');
+                                        const response = await fetch('purchase_order_lines_update.php', {
+                                                method: 'POST',
+                                                body: payload,
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (!response.ok || !data.success) {
+                                                throw new Error(data.message || 'Unable to update purchase order lines.');
+                                        }
+
+                                        sessionStorage.setItem('poUpdateNotice', data.message || 'Purchase order lines updated successfully.');
+                                        window.location.reload();
+                                } catch (error) {
+                                        showAlert('danger', error.message);
+                                }
+                        }
+
+                        if (saveLinesButton) {
+                                saveLinesButton.addEventListener('click', saveLines);
+                        }
+
+                        refreshRunningTotals();
                 }
         })();
 </script>

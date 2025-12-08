@@ -67,3 +67,4 @@ l view.
 - 2025-12-08: Switched purchase order header amounts to monospaced text inputs and allowed editing of exclusive, inclusive, and VAT fields without numeric type restrictions.
 - 2025-12-08: Formatted purchase order amounts with space-separated thousands and highlighted the calculated total when it matches the inclusive amount.
 - 2026-07-12: Normalised purchase order header amount parsing to accept formatted numbers when saving edits.
+- 2026-07-13: Enabled editable standard purchase order lines with monospaced inputs, live totals, add-line controls, and a secured update endpoint that versions updates.
