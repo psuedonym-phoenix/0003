@@ -206,6 +206,7 @@ function fetch_purchase_order_view(array $input): array
         'sharedParams' => $sharedParams,
         'returnParams' => $returnParams,
         'suppliers' => fetch_supplier_options($pdo),
+        'supplierDetails' => fetch_supplier_details($pdo, $purchaseOrder),
         'status' => 200,
     ];
 }
@@ -255,6 +256,36 @@ function fetch_supplier_options(PDO $pdo): array
         return $stmt->fetchAll();
     } catch (Throwable $exception) {
         // If the suppliers table is unavailable we still want the purchase order view to render.
+        return [];
+    }
+}
+
+/**
+ * Load supplier master data so the view can display accurate addresses and contact details.
+ * Falls back gracefully when identifiers are missing or the suppliers table is unavailable.
+ */
+function fetch_supplier_details(PDO $pdo, array $purchaseOrder): array
+{
+    $supplierId = $purchaseOrder['supplier_id'] ?? null;
+    $supplierCode = trim((string) ($purchaseOrder['supplier_code'] ?? ''));
+
+    try {
+        if ($supplierId !== null) {
+            $stmt = $pdo->prepare('SELECT * FROM suppliers WHERE id = :id LIMIT 1');
+            $stmt->bindValue(':id', $supplierId, PDO::PARAM_INT);
+        } elseif ($supplierCode !== '') {
+            $stmt = $pdo->prepare('SELECT * FROM suppliers WHERE supplier_code = :supplier_code LIMIT 1');
+            $stmt->bindValue(':supplier_code', $supplierCode, PDO::PARAM_STR);
+        } else {
+            return [];
+        }
+
+        $stmt->execute();
+        $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $supplier ?: [];
+    } catch (Throwable $exception) {
+        // If the suppliers table cannot be queried we return an empty set so the view can fall back to PO data.
         return [];
     }
 }
