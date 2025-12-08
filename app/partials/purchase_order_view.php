@@ -12,6 +12,14 @@
         }
 
         /**
+         * Format currency values with a space as the thousands separator.
+         */
+        function format_amount(float $amount): string
+        {
+                return number_format($amount, 2, '.', ' ');
+        }
+
+        /**
          * Return the first available value from the supplier master data or purchase order fallback fields.
          * Supplier data is preferred so the view shows the latest address and contact details.
          */
@@ -69,10 +77,12 @@
 	// Normalise key financial amounts so the view can show consistent figures
 	// regardless of whether older columns like exclusive_amount are still present.
 	$exclusiveAmount = (float) ($purchaseOrder['subtotal'] ?? $purchaseOrder['exclusive_amount'] ?? 0);
-	$inclusiveAmount = (float) ($purchaseOrder['total_amount'] ?? 0);
-	$vatPercent = (float) ($purchaseOrder['vat_percent'] ?? 0);
-	$vatAmount = (float) ($purchaseOrder['vat_amount'] ?? 0);
-	$calculatedLineTotal = (float) ($lineSummary['sum'] ?? 0);
+        $inclusiveAmount = (float) ($purchaseOrder['total_amount'] ?? 0);
+        $vatPercent = (float) ($purchaseOrder['vat_percent'] ?? 0);
+        $vatAmount = (float) ($purchaseOrder['vat_amount'] ?? 0);
+        $calculatedLineTotal = (float) ($lineSummary['sum'] ?? 0);
+        $amountsMatch = abs($inclusiveAmount - $calculatedLineTotal) < 0.005;
+        $totalHighlightClass = $amountsMatch ? 'bg-success-subtle' : 'bg-danger-subtle';
 	
 	// Convert order date to an ISO value the date picker can render.
 	$orderDateValue = '';
@@ -262,7 +272,7 @@
                                         class="form-control text-end font-monospace"
                                         id="exclusiveAmount"
                                         name="exclusive_amount"
-                                        value="<?php echo number_format($exclusiveAmount, 2, '.', ''); ?>">
+                                        value="<?php echo format_amount($exclusiveAmount); ?>">
                                 </div>
 				
 			</div>
@@ -286,12 +296,12 @@
                                         class="form-control text-end font-monospace"
                                         id="vatAmount"
                                         name="vat_amount"
-                                        value="<?php echo number_format($vatAmount, 2, '.', ''); ?>"
+                                        value="<?php echo format_amount($vatAmount); ?>"
                                         >
                                 </div>
-			</div>
-			<div class="row mb-1">
-				<div class="col-sm-9"></div>
+                        </div>
+                        <div class="row mb-1">
+                                <div class="col-sm-9"></div>
 				
 				
 				<label for="totalAmount" class="col-sm-1 col-form-label text-end">Inclusive</label>
@@ -301,7 +311,7 @@
                                         class="form-control text-end font-monospace"
                                         id="totalAmount"
                                         name="total_amount"
-                                        value="<?php echo number_format($inclusiveAmount, 2, '.', ''); ?>"
+                                        value="<?php echo format_amount($inclusiveAmount); ?>"
                                         >
 
                                 </div>
@@ -312,8 +322,8 @@
                                 <div class="col-sm-2 d-flex flex-column gap-2">
                                         <input
                                         type="text"
-                                        class="form-control text-end font-monospace"
-                                        value="R <?php echo number_format($calculatedLineTotal, 2); ?>"
+                                        class="form-control text-end font-monospace <?php echo $totalHighlightClass; ?>"
+                                        value="R <?php echo format_amount($calculatedLineTotal); ?>"
                                         readonly
                                         >
                                 </div>
