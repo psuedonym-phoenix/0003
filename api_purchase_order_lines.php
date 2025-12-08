@@ -2,9 +2,7 @@
 // api_purchase_order_lines.php
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/app/config.php';
-require_once __DIR__ . '/app/db.php';
-require_once __DIR__ . '/app/api_key.php';
+require_once __DIR__ . '/app/bootstrap_api.php';
 
 // 1) Only POST allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -24,11 +22,7 @@ if (!is_array($data)) {
 }
 
 // 3) API key
-if (!isset($data['api_key']) || $data['api_key'] !== EEMS_API_KEY) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Forbidden']);
-    exit;
-}
+enforce_api_key($data);
 
 // 4) Helper
 function get_field($arr, $key) {
