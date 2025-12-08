@@ -125,7 +125,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                 <input type="text" class="form-control" value="<?php echo e($purchaseOrder['created_at'] ?? ''); ?>" readonly>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label for="supplierSelect" class="form-label">Supplier</label>
                 <select class="form-select" id="supplierSelect" name="supplier_name" required>
                     <option value="">Select a supplier</option>
@@ -142,7 +142,7 @@ $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_numb
                 </select>
                 <div class="form-text">Use the dropdown to choose a supplier by name.</div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label for="orderDate" class="form-label">Order Date</label>
                 <input type="date" class="form-control" id="orderDate" name="order_date" value="<?php echo e($orderDateValue); ?>">
             </div>
