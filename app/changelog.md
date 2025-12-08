@@ -60,3 +60,4 @@ l view.
 - 2025-12-08: Enlarged the PO number display in the purchase order header view, hid order book/order sheet fields, and kept the purchase order type fixed.
 - 2025-12-08: Updated purchase order header layout to align supplier, order date, and reference fields on one row and kept purchase order type with uploaded metadata side by side.
 - 2025-06-04: Organised purchase order financial fields into a single row with equal widths and reduced VAT % label text for better alignment.
+- 2025-06-05: Displayed supplier address and contact details on the purchase order view using stored header fields.

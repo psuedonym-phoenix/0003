@@ -5,11 +5,26 @@
 	// Restrict access to authenticated admins only.
 	require_authentication();
 	
-	// Helper to safely escape output.
-	function e(string $value): string
-	{
-		return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-	}
+        // Helper to safely escape output.
+        function e(string $value): string
+        {
+                return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        }
+
+        /**
+         * Return the first available purchase order value from a list of possible column names.
+         * This keeps the view resilient to legacy/variant supplier column naming without raising notices.
+         */
+        function get_purchase_order_field(array $purchaseOrder, array $keys): string
+        {
+                foreach ($keys as $key) {
+                        if (array_key_exists($key, $purchaseOrder)) {
+                                return (string) ($purchaseOrder[$key] ?? '');
+                        }
+                }
+
+                return '';
+        }
 	
 	$viewData = fetch_purchase_order_view($_GET);
 	
@@ -29,9 +44,20 @@
 	$nextPo = $viewData['nextPo'];
 	$sharedParams = $viewData['sharedParams'];
 	$returnParams = $viewData['returnParams'];
-	$lineSummary = $viewData['lineSummary'];
-	$suppliers = $viewData['suppliers'];
-	$returnViewLabel = ($returnParams['view'] ?? 'purchase_orders') === 'line_entry_enquiry'
+        $lineSummary = $viewData['lineSummary'];
+        $suppliers = $viewData['suppliers'];
+        $supplierContact = [
+                'address1' => get_purchase_order_field($purchaseOrder, ['address_line1']),
+                'address2' => get_purchase_order_field($purchaseOrder, ['address_line2']),
+                'address3' => get_purchase_order_field($purchaseOrder, ['address_line3']),
+                'address4' => get_purchase_order_field($purchaseOrder, ['address_line4']),
+                'telephone' => get_purchase_order_field($purchaseOrder, ['telephone_no', 'telephone_number']),
+                'fax' => get_purchase_order_field($purchaseOrder, ['fax_no', 'fax_number']),
+                'contact_name' => get_purchase_order_field($purchaseOrder, ['Contact_Person', 'contact_person']),
+                'contact_number' => get_purchase_order_field($purchaseOrder, ['contact_person_no', 'contact_person_number', 'Contact_Person_No']),
+                'contact_email' => get_purchase_order_field($purchaseOrder, ['contact_email']),
+        ];
+        $returnViewLabel = ($returnParams['view'] ?? 'purchase_orders') === 'line_entry_enquiry'
     ? 'Back to Line Entry Enquiry'
     : 'Back to Purchase Orders';
 	
@@ -138,17 +164,19 @@
 				</div>
 				
 			</div>
-			<div class="row mb-1">
-				<label class="col-sm-1 col-form-label">Address 1</label>
-				<div class="col-sm-3 d-flex flex-column gap-2">
-					<input type="text" class="form-control" value="Address Line 1" readonly>
-				</div>
-				
-				<div class="col-sm-1">Tel:</div>
-				<div class="col-sm-3">Telephone Number</div>
-				<div class="col-sm-1"></div>
-				<label for="reference" class="col-sm-1 col-form-label">Reference</label>
-				<div class="col-sm-2">
+                        <div class="row mb-1">
+                                <label class="col-sm-1 col-form-label">Address 1</label>
+                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                        <input type="text" class="form-control" value="<?php echo e($supplierContact['address1']); ?>" readonly>
+                                </div>
+
+                                <div class="col-sm-1">Tel:</div>
+                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                        <input type="text" class="form-control" value="<?php echo e($supplierContact['telephone']); ?>" readonly>
+                                </div>
+                                <div class="col-sm-1"></div>
+                                <label for="reference" class="col-sm-1 col-form-label">Reference</label>
+                                <div class="col-sm-2">
 					<input type="text" 
 					class="form-control" 
 					id="reference" 
@@ -157,46 +185,56 @@
 				</div>
 				
 			</div>
-			
-			<div class="row mb-1">
-				
-				<label class="col-sm-1 col-form-label">Address 2</label>
-				<div class="col-sm-3 d-flex flex-column gap-2">
-					<input type="text" class="form-control" value="Address Line 2" readonly>
-				</div>
-				<div class="col-sm-1">Fax:</div>
-				<div class="col-sm-3">Fax Number</div>
-				<div class="col-sm-1"></div>
-				<label class="col-sm-1 col-form-label">Order Type</label>
-				<div class="col-sm-2">
+
+                        <div class="row mb-1">
+
+                                <label class="col-sm-1 col-form-label">Address 2</label>
+                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                        <input type="text" class="form-control" value="<?php echo e($supplierContact['address2']); ?>" readonly>
+                                </div>
+                                <div class="col-sm-1">Fax:</div>
+                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                        <input type="text" class="form-control" value="<?php echo e($supplierContact['fax']); ?>" readonly>
+                                </div>
+                                <div class="col-sm-1"></div>
+                                <label class="col-sm-1 col-form-label">Order Type</label>
+                                <div class="col-sm-2">
 					<input type="text" class="form-control" value="<?php echo ucfirst($poType); ?>" readonly>				
 				</div>
 				
 			</div>
 			
-			<div class="row mb-1">
-				
-				<label class="col-sm-1 col-form-label">Address 3</label>
-				<div class="col-sm-3 d-flex flex-column gap-2">
-					<input type="text" class="form-control" value="Address Line 3" readonly>
-				</div>
-				
-				<div class="col-sm-1">Contact Name</div>
-				<div class="col-sm-3">Contact Number</div>
-				<div class="col-sm-1"></div>
-				<label class="col-sm-1 col-form-label">Uploaded</label>
-				<div class="col-sm-2">
-					<input type="text" class="form-control" value="<?php echo e($purchaseOrder['created_at'] ?? ''); ?>" readonly>
-				</div>
-			</div>
-			
-			<div class="row mb-1">
-				<label class="col-sm-1 col-form-label">Address 4</label>
-				<div class="col-sm-3 d-flex flex-column gap-2">
-					<input type="text" class="form-control" value="Address Line 4" readonly>
-				</div>
-				<div class="col-sm-4">Contact Email Address</div>
-			</div>
+                        <div class="row mb-1">
+
+                                <label class="col-sm-1 col-form-label">Address 3</label>
+                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                        <input type="text" class="form-control" value="<?php echo e($supplierContact['address3']); ?>" readonly>
+                                </div>
+
+                                <div class="col-sm-1">Contact Name</div>
+                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                        <input type="text" class="form-control" value="<?php echo e($supplierContact['contact_name']); ?>" readonly>
+                                </div>
+                                <div class="col-sm-1">Contact Number</div>
+                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                        <input type="text" class="form-control" value="<?php echo e($supplierContact['contact_number']); ?>" readonly>
+                                </div>
+                        </div>
+
+                        <div class="row mb-1">
+                                <label class="col-sm-1 col-form-label">Address 4</label>
+                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                        <input type="text" class="form-control" value="<?php echo e($supplierContact['address4']); ?>" readonly>
+                                </div>
+                                <div class="col-sm-1">Contact Email</div>
+                                <div class="col-sm-4 d-flex flex-column gap-2">
+                                        <input type="email" class="form-control" value="<?php echo e($supplierContact['contact_email']); ?>" readonly>
+                                </div>
+                                <label class="col-sm-1 col-form-label">Uploaded</label>
+                                <div class="col-sm-2">
+                                        <input type="text" class="form-control" value="<?php echo e($purchaseOrder['created_at'] ?? ''); ?>" readonly>
+                                </div>
+                        </div>
 			
 			<div class="row mb-1">
 				<div class="col-sm-9"></div>
