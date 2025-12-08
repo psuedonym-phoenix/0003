@@ -229,12 +229,15 @@
                                 </div>
 
                                 <div class="col-sm-1">Contact Name</div>
-                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                <div class="col-sm-2 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['contact_name']); ?>" readonly>
                                 </div>
-                                <div class="col-sm-1">Contact Number</div>
-                                <div class="col-sm-3 d-flex flex-column gap-2">
+                                <div class="col-sm-2 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['contact_number']); ?>" readonly>
+                                </div>
+								<label class="col-sm-1 col-form-label">Uploaded</label>
+                                <div class="col-sm-2">
+                                        <input type="text" class="form-control" value="<?php echo e($purchaseOrder['created_at'] ?? ''); ?>" readonly>
                                 </div>
                         </div>
 
@@ -247,10 +250,7 @@
                                 <div class="col-sm-4 d-flex flex-column gap-2">
                                         <input type="email" class="form-control" value="<?php echo e($supplierContact['contact_email']); ?>" readonly>
                                 </div>
-                                <label class="col-sm-1 col-form-label">Uploaded</label>
-                                <div class="col-sm-2">
-                                        <input type="text" class="form-control" value="<?php echo e($purchaseOrder['created_at'] ?? ''); ?>" readonly>
-                                </div>
+                                
                         </div>
 			
 			<div class="row mb-1">
