@@ -272,9 +272,9 @@
 				<label for="vatPercent" class="col-sm-1 col-form-label text-end">VAT %</label>
 				<div class="col-sm-1 d-flex flex-column gap-2">
 					<input
-					type="number"
+					type="text"
 					step="0.01"
-					class="form-control text-end"
+					class="form-control text-end font-monospace"
 					id="vatPercent"
 					name="vat_percent"
 					value="<?php echo number_format($vatPercent, 2, '.', ''); ?>"
@@ -308,7 +308,7 @@
 			</div>
 			<div class="row mb-1">
 				<div class="col-sm-9"></div>
-				<label class="col-sm-1">Total Amount</label>
+				<label class="col-sm-1 col-form-label text-end">Total Amount</label>
                                 <div class="col-sm-2 d-flex flex-column gap-2">
                                         <input
                                         type="text"
