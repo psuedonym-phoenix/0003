@@ -27,10 +27,33 @@ $supplierCode = trim((string) ($_POST['supplier_code'] ?? ''));
 $orderSheet = trim((string) ($_POST['order_sheet_no'] ?? ''));
 $reference = trim((string) ($_POST['reference'] ?? ''));
 $orderDateInput = trim((string) ($_POST['order_date'] ?? ''));
-$exclusiveRaw = $_POST['exclusive_amount'] ?? '';
-$vatPercentRaw = $_POST['vat_percent'] ?? '';
-$vatAmountRaw = $_POST['vat_amount'] ?? '';
-$totalAmountRaw = $_POST['total_amount'] ?? '';
+
+/**
+ * Normalise a numeric form field by stripping spaces/commas so formatted values like
+ * "1 234.50" or "1,234.50" can be safely parsed into floats.
+ */
+function parse_optional_float($rawValue)
+{
+    if ($rawValue === null) {
+        return null;
+    }
+
+    $trimmed = trim((string) $rawValue);
+
+    if ($trimmed === '') {
+        return null;
+    }
+
+    // Allow thousands separators while leaving the decimal point intact.
+    $normalised = preg_replace('/[\s,]/', '', $trimmed);
+
+    return filter_var($normalised, FILTER_VALIDATE_FLOAT);
+}
+
+$exclusiveAmount = parse_optional_float($_POST['exclusive_amount'] ?? null);
+$vatPercent = parse_optional_float($_POST['vat_percent'] ?? null);
+$vatAmount = parse_optional_float($_POST['vat_amount'] ?? null);
+$totalAmount = parse_optional_float($_POST['total_amount'] ?? null);
 
 if (!$purchaseOrderId) {
     respond(400, [
@@ -61,15 +84,10 @@ if ($orderDateInput !== '') {
     $orderDate = $date->format('Y-m-d');
 }
 
-$exclusiveAmount = $exclusiveRaw === '' ? null : filter_var($exclusiveRaw, FILTER_VALIDATE_FLOAT);
-$vatPercent = $vatPercentRaw === '' ? null : filter_var($vatPercentRaw, FILTER_VALIDATE_FLOAT);
-$vatAmount = $vatAmountRaw === '' ? null : filter_var($vatAmountRaw, FILTER_VALIDATE_FLOAT);
-$totalAmount = $totalAmountRaw === '' ? null : filter_var($totalAmountRaw, FILTER_VALIDATE_FLOAT);
-
 if ($exclusiveAmount === false || $vatPercent === false || $vatAmount === false || $totalAmount === false) {
     respond(400, [
         'success' => false,
-        'message' => 'Amounts must be valid numbers.',
+        'message' => 'Amounts must be valid numbers. Remove spaces or commas if necessary.',
     ]);
 }
 
