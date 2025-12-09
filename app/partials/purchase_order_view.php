@@ -75,6 +75,7 @@
         $lineSummary = $viewData['lineSummary'];
         $suppliers = $viewData['suppliers'];
         $supplierDetails = $viewData['supplierDetails'] ?? [];
+        $unitOptions = $viewData['unitOptions'] ?? [];
         $supplierContact = [
                 'address1' => get_supplier_field($supplierDetails, $purchaseOrder, ['address_line1']),
                 'address2' => get_supplier_field($supplierDetails, $purchaseOrder, ['address_line2']),
@@ -397,7 +398,7 @@
                                                         <th scope="col" class="column-item-code">Item Code</th>
                                                         <th scope="col" class="column-description">Description</th>
                                                         <th scope="col" class="text-center column-quantity">QTY</th>
-                                                        <th scope="col" class="column-unit">Unit</th>
+                                                        <th scope="col" class="column-unit">UOM</th>
                                                         <th scope="col" class="text-end column-unit-price">Unit Price</th>
                                                         <th scope="col" class="text-end column-discount">Discount %</th>
                                                         <th scope="col" class="text-end column-net-price">Net Price</th>
@@ -445,7 +446,7 @@
                                                         <td class="column-item-code"><input type="text" class="form-control form-control-sm line-item-code" value="<?php echo e($line['item_code'] ?? ''); ?>" /></td>
                                                         <td class="column-description"><input type="text" class="form-control form-control-sm line-description" value="<?php echo e($line['description'] ?? ''); ?>" /></td>
                                                         <td class="column-quantity"><input type="number" step="1" min="0" inputmode="decimal" class="form-control form-control-sm text-end line-quantity" value="<?php echo rtrim(rtrim(number_format((float) ($line['quantity'] ?? 0), 4, '.', ''), '0'), '.'); ?>" /></td>
-                                                        <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="<?php echo e($line['unit'] ?? ''); ?>" /></td>
+                                                        <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" list="unitOptionsDatalist" value="<?php echo e($line['unit'] ?? ''); ?>" autocomplete="off" /></td>
                                                         <td class="column-unit-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <?php $lineNetPrice = round_currency((float) ($line['net_price'] ?? 0)); ?>
@@ -467,6 +468,7 @@
                                         </tbody>
                                 </table>
                         </div>
+                        <datalist id="unitOptionsDatalist"></datalist>
                         <?php if ($poType !== 'transactional') : ?>
                         <div class="d-flex justify-content-between align-items-center mt-3">
                                 <button type="button" class="btn btn-outline-primary" id="addLineButton">Add line</button>
@@ -492,6 +494,8 @@
                 }, $suppliers), static function ($supplier) {
                         return $supplier['name'] !== '';
                 })), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+                const unitOptions = <?php echo json_encode(array_values(array_map('strval', $unitOptions)), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+                const unitDatalist = document.getElementById('unitOptionsDatalist');
                 let suggestionDebounce = null;
 
                 function showAlert(type, message) {
@@ -535,6 +539,25 @@
                         return true;
                 }
 
+                function renderUnitSuggestions(term = '') {
+                        if (!unitDatalist) {
+                                return;
+                        }
+
+                        const query = term.trim().toLowerCase();
+                        const matches = unitOptions
+                                .filter((option) => query === '' || fuzzyMatch(query, option))
+                                .slice(0, 50);
+
+                        unitDatalist.innerHTML = '';
+
+                        matches.forEach((option) => {
+                                const optionElement = document.createElement('option');
+                                optionElement.value = option;
+                                unitDatalist.appendChild(optionElement);
+                        });
+                }
+
                 function hideSupplierSuggestions() {
                         if (!supplierSuggestions) {
                                 return;
@@ -542,6 +565,16 @@
 
                         supplierSuggestions.classList.add('d-none');
                         supplierSuggestions.innerHTML = '';
+                }
+
+                function attachUnitInput(input) {
+                        if (!input || !unitDatalist) {
+                                return;
+                        }
+
+                        const refreshSuggestions = () => renderUnitSuggestions(input.value);
+                        input.addEventListener('focus', refreshSuggestions);
+                        input.addEventListener('input', refreshSuggestions);
                 }
 
                 function selectSupplier(name, code) {
@@ -627,6 +660,8 @@
 
                         syncSupplierCodeFromInput();
                 }
+
+                renderUnitSuggestions('');
 
                 document.addEventListener('click', (event) => {
                         if (!supplierSuggestions || supplierSuggestions.contains(event.target)) {
@@ -774,6 +809,7 @@
                                 enforceDecimalInput(row.querySelector('.line-unit-price'));
                                 enforceDecimalInput(row.querySelector('.line-net-price'));
                                 enforceQuantityInput(row.querySelector('.line-quantity'));
+                                attachUnitInput(row.querySelector('.line-unit'));
                         }
 
                         /**
@@ -891,7 +927,7 @@
                                         <td class="column-item-code"><input type="text" class="form-control form-control-sm line-item-code" value="" /></td>
                                         <td class="column-description"><input type="text" class="form-control form-control-sm line-description" value="" /></td>
                                         <td class="column-quantity"><input type="number" step="1" min="0" inputmode="decimal" class="form-control form-control-sm text-end line-quantity" value="0" /></td>
-                                        <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="" /></td>
+                                        <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="" list="unitOptionsDatalist" autocomplete="off" /></td>
                                         <td class="column-unit-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="0.00" /></td>
                                         <td class="text-end column-net-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-net-price" value="0.00" /></td>

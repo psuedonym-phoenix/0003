@@ -78,3 +78,4 @@ l view.
 - 2026-07-21: Namespaced standard line input sizing rules under #poLineTable to align with other line item styles.
 - 2026-07-22: Aligned purchase order line headers with editable cells, renamed the quantity heading to QTY, and widened the description column for readability.
 - 2026-07-23: Centered the QTY column header and allowed decimal quantities while keeping spinner controls incrementing by one.
+- 2026-07-24: Added a UOM catalogue with seeded defaults, fuzzy dropdown suggestions on purchase order lines, and automatic cataloguing of new units when saving edits.

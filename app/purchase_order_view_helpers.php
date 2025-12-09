@@ -2,6 +2,27 @@
 require_once __DIR__ . '/db.php';
 
 /**
+ * Fetch the available units of measurement from the catalogue table.
+ * The view relies on these options to build the UOM dropdown with fuzzy matching.
+ */
+function fetch_unit_options(PDO $pdo): array
+{
+    try {
+        $stmt = $pdo->query('SELECT unit_label FROM units_of_measurement ORDER BY unit_label ASC');
+        $units = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        return array_values(array_filter(array_map(static function ($unit) {
+            return trim((string) $unit);
+        }, $units), static function ($unit) {
+            return $unit !== '';
+        }));
+    } catch (Throwable $exception) {
+        // If the table does not yet exist, fall back to an empty list so the view still renders.
+        return [];
+    }
+}
+
+/**
  * Build a URL query string that omits empty values.
  */
 function build_query(array $params): string
@@ -207,6 +228,7 @@ function fetch_purchase_order_view(array $input): array
         'returnParams' => $returnParams,
         'suppliers' => fetch_supplier_options($pdo),
         'supplierDetails' => fetch_supplier_details($pdo, $purchaseOrder),
+        'unitOptions' => fetch_unit_options($pdo),
         'status' => 200,
     ];
 }

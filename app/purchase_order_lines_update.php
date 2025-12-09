@@ -57,6 +57,24 @@ function normalise_number($value): float
     return (float) $value;
 }
 
+/**
+ * Store the provided unit of measurement in the catalogue table when it is missing.
+ */
+function ensure_unit_catalogued(PDO $pdo, string $unit): void
+{
+    $trimmedUnit = trim($unit);
+
+    if ($trimmedUnit === '') {
+        return;
+    }
+
+    $insertUnit = $pdo->prepare(
+        'INSERT INTO units_of_measurement (unit_label, created_at) VALUES (:unit_label, NOW())
+        ON DUPLICATE KEY UPDATE unit_label = VALUES(unit_label)'
+    );
+    $insertUnit->execute([':unit_label' => $trimmedUnit]);
+}
+
 try {
     $pdo = get_db_connection();
 
@@ -186,6 +204,8 @@ try {
             ':net_price' => $line['net_price'],
             ':is_vatable' => $line['is_vatable'],
         ]);
+
+        ensure_unit_catalogued($pdo, $line['unit']);
     }
 
     $pdo->commit();
