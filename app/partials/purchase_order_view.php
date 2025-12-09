@@ -733,7 +733,8 @@
                         const totalAmountInput = document.getElementById('totalAmount');
                         const addLineButton = document.getElementById('addLineButton');
                         const saveLinesButton = document.getElementById('saveLinesButton');
-                        const purchaseOrderId = <?php echo (int) $purchaseOrder['id']; ?>;
+                        let purchaseOrderId = <?php echo (int) $purchaseOrder['id']; ?>;
+                        const purchaseOrderIdInput = document.querySelector('input[name="purchase_order_id"]');
 
                         /**
                          * Parse a numeric string safely, returning 0 when invalid.
@@ -1076,6 +1077,16 @@
 
                                         if (!response.ok || !data.success) {
                                                 throw new Error(errorDetail || 'Unable to update purchase order lines.');
+                                        }
+
+                                        // When a new version is created, use its ID for subsequent requests so
+                                        // header updates do not fail the "latest version" check.
+                                        if (data.purchase_order_id) {
+                                                purchaseOrderId = Number(data.purchase_order_id);
+
+                                                if (purchaseOrderIdInput) {
+                                                        purchaseOrderIdInput.value = String(purchaseOrderId);
+                                                }
                                         }
 
                                         const successMessage = data.message || 'Purchase order lines updated successfully.';
