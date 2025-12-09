@@ -690,7 +690,12 @@
                          * Parse a numeric string safely, returning 0 when invalid.
                          */
                         function toNumber(value) {
-                                const parsed = parseFloat(String(value).replace(/[,\s]/g, ''));
+                                const cleaned = String(value)
+                                        .replace(/\s+/g, '')
+                                        // Normalise decimal commas to dots so European-style entries parse correctly
+                                        .replace(',', '.');
+
+                                const parsed = parseFloat(cleaned.replace(/,/g, ''));
                                 return Number.isFinite(parsed) ? parsed : 0;
                         }
 
@@ -717,7 +722,7 @@
                          * Normalise displayed currency values so users can see running totals update cleanly.
                          */
                         function formatCurrency(value) {
-                                return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                return roundCurrency(value).toFixed(2);
                         }
 
                         /**
