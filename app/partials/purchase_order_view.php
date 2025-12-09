@@ -396,7 +396,7 @@
 							<?php else : ?>
                                                         <th scope="col" class="column-item-code">Item Code</th>
                                                         <th scope="col" class="column-description">Description</th>
-                                                        <th scope="col" class="text-end column-quantity">QTY</th>
+                                                        <th scope="col" class="text-center column-quantity">QTY</th>
                                                         <th scope="col" class="column-unit">Unit</th>
                                                         <th scope="col" class="text-end column-unit-price">Unit Price</th>
                                                         <th scope="col" class="text-end column-discount">Discount %</th>
@@ -444,7 +444,7 @@
                                                         <?php else : ?>
                                                         <td class="column-item-code"><input type="text" class="form-control form-control-sm line-item-code" value="<?php echo e($line['item_code'] ?? ''); ?>" /></td>
                                                         <td class="column-description"><input type="text" class="form-control form-control-sm line-description" value="<?php echo e($line['description'] ?? ''); ?>" /></td>
-                                                        <td class="column-quantity"><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end line-quantity" value="<?php echo number_format((float) ($line['quantity'] ?? 0), 0, '.', ''); ?>" /></td>
+                                                        <td class="column-quantity"><input type="number" step="1" min="0" inputmode="decimal" class="form-control form-control-sm text-end line-quantity" value="<?php echo rtrim(rtrim(number_format((float) ($line['quantity'] ?? 0), 4, '.', ''), '0'), '.'); ?>" /></td>
                                                         <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="<?php echo e($line['unit'] ?? ''); ?>" /></td>
                                                         <td class="column-unit-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
@@ -745,15 +745,15 @@
                         /**
                          * Force integer-only entry for quantity fields and tidy values on blur.
                          */
-                        function enforceIntegerInput(input) {
+                        function enforceQuantityInput(input) {
                                 if (!input) {
                                         return;
                                 }
 
-                                input.setAttribute('inputmode', 'numeric');
+                                input.setAttribute('inputmode', 'decimal');
 
                                 input.addEventListener('input', () => {
-                                        const cleaned = input.value.replace(/[^0-9-]/g, '');
+                                        const cleaned = input.value.replace(/[^0-9.,-]/g, '');
 
                                         if (cleaned !== input.value) {
                                                 input.value = cleaned;
@@ -761,8 +761,8 @@
                                 });
 
                                 input.addEventListener('blur', () => {
-                                        const value = Math.max(0, Math.round(toNumber(input.value)));
-                                        input.value = String(value);
+                                        const value = Math.max(0, toNumber(input.value));
+                                        input.value = value === 0 ? '0' : String(value);
                                 });
                         }
 
@@ -773,7 +773,7 @@
 
                                 enforceDecimalInput(row.querySelector('.line-unit-price'));
                                 enforceDecimalInput(row.querySelector('.line-net-price'));
-                                enforceIntegerInput(row.querySelector('.line-quantity'));
+                                enforceQuantityInput(row.querySelector('.line-quantity'));
                         }
 
                         /**
@@ -838,7 +838,7 @@
                                         return;
                                 }
 
-                                const quantity = Math.max(0, Math.round(toNumber(quantityInput.value)));
+                                const quantity = Math.max(0, toNumber(quantityInput.value));
                                 const unitPrice = toNumber(unitPriceInput.value);
                                 const discount = toNumber(discountInput.value);
                                 const netPrice = calculateNetPrice(quantity, unitPrice, discount);
@@ -890,7 +890,7 @@
                                         <td class="fw-semibold column-line-number">${lineNumber}</td>
                                         <td class="column-item-code"><input type="text" class="form-control form-control-sm line-item-code" value="" /></td>
                                         <td class="column-description"><input type="text" class="form-control form-control-sm line-description" value="" /></td>
-                                        <td class="column-quantity"><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end line-quantity" value="0" /></td>
+                                        <td class="column-quantity"><input type="number" step="1" min="0" inputmode="decimal" class="form-control form-control-sm text-end line-quantity" value="0" /></td>
                                         <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="" /></td>
                                         <td class="column-unit-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="0.00" /></td>
@@ -924,7 +924,7 @@
                                         line_no: index + 1,
                                         item_code: (row.querySelector('.line-item-code')?.value || '').trim(),
                                         description: (row.querySelector('.line-description')?.value || '').trim(),
-                                        quantity: Math.max(0, Math.round(toNumber(row.querySelector('.line-quantity')?.value || 0))),
+                                        quantity: Math.max(0, toNumber(row.querySelector('.line-quantity')?.value || 0)),
                                         unit: (row.querySelector('.line-unit')?.value || '').trim(),
                                         unit_price: roundCurrency(toNumber(row.querySelector('.line-unit-price')?.value || 0)),
                                         discount_percent: toNumber(row.querySelector('.line-discount')?.value || 0),
