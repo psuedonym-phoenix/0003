@@ -1055,16 +1055,26 @@
                                                 body: payload,
                                         });
 
-                                        const data = await response.json();
+                                        let data;
+                                        try {
+                                                data = await response.json();
+                                        } catch (parseError) {
+                                                throw new Error('Received an invalid response while saving purchase order lines.');
+                                        }
+
+                                        const errorDetail = [data.message, data.error].filter(Boolean).join(' - ');
 
                                         if (!response.ok || !data.success) {
-                                                throw new Error(data.message || 'Unable to update purchase order lines.');
+                                                throw new Error(errorDetail || 'Unable to update purchase order lines.');
                                         }
 
                                         sessionStorage.setItem('poUpdateNotice', data.message || 'Purchase order lines updated successfully.');
                                         window.location.reload();
                                 } catch (error) {
-                                        showAlert('danger', error.message);
+                                        const errorMessage = error instanceof Error
+                                                ? error.message
+                                                : 'Unable to update purchase order lines. Please try again.';
+                                        showAlert('danger', errorMessage);
                                 }
                         }
 
