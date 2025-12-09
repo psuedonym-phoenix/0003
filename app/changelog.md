@@ -79,3 +79,4 @@ l view.
 - 2026-07-22: Aligned purchase order line headers with editable cells, renamed the quantity heading to QTY, and widened the description column for readability.
 - 2026-07-23: Centered the QTY column header and allowed decimal quantities while keeping spinner controls incrementing by one.
 - 2026-07-24: Added a UOM catalogue with seeded defaults, fuzzy dropdown suggestions on purchase order lines, and automatic cataloguing of new units when saving edits.
+- 2026-07-25: Added delete actions to standard purchase order lines, defaulted new lines to "each" UOM, and aligned UOM header/content positions.
