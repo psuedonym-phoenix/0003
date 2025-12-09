@@ -396,13 +396,13 @@
 							<?php else : ?>
 							<th scope="col">Item Code</th>
 							<th scope="col">Description</th>
-							<th scope="col" class="text-end">Quantity</th>
-							<th scope="col">Unit</th>
-							<th scope="col" class="text-end">Unit Price</th>
-							<th scope="col" class="text-end">Discount %</th>
-							<th scope="col" class="text-end">Net Price</th>
-							<th scope="col" class="text-end">Running Total</th>
-							<th scope="col" class="text-center">VATable</th>
+                                                        <th scope="col" class="text-end column-quantity">Quantity</th>
+                                                        <th scope="col" class="column-unit">Unit</th>
+                                                        <th scope="col" class="text-end">Unit Price</th>
+                                                        <th scope="col" class="text-end column-discount">Discount %</th>
+                                                        <th scope="col" class="text-end">Net Price</th>
+                                                        <th scope="col" class="text-end">Running Total</th>
+                                                        <th scope="col" class="text-center">VATable</th>
 							<?php endif; ?>
 						</tr>
 					</thead>
@@ -444,10 +444,10 @@
                                                         <?php else : ?>
                                                         <td><input type="text" class="form-control form-control-sm line-item-code" value="<?php echo e($line['item_code'] ?? ''); ?>" /></td>
                                                         <td><input type="text" class="form-control form-control-sm line-description" value="<?php echo e($line['description'] ?? ''); ?>" /></td>
-                                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-quantity" value="<?php echo number_format((float) ($line['quantity'] ?? 0), 2, '.', ''); ?>" /></td>
-                                                        <td><input type="text" class="form-control form-control-sm line-unit" value="<?php echo e($line['unit'] ?? ''); ?>" /></td>
+                                                        <td class="column-quantity"><input type="number" step="0.01" class="form-control form-control-sm text-end line-quantity" value="<?php echo number_format((float) ($line['quantity'] ?? 0), 2, '.', ''); ?>" /></td>
+                                                        <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="<?php echo e($line['unit'] ?? ''); ?>" /></td>
                                                         <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
-                                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
+                                                        <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <?php $lineNetPrice = round_currency((float) ($line['net_price'] ?? 0)); ?>
                                                         <?php $runningTotal = round_currency($runningTotal + $lineNetPrice); ?>
                                                         <td class="text-end"><input type="text" class="form-control form-control-sm text-end line-net-price" value="<?php echo number_format($lineNetPrice, 2, '.', ''); ?>" readonly /></td>
@@ -786,16 +786,20 @@
                         }
 
                         poLineTable.addEventListener('focusout', (event) => {
-                                const row = event.target.closest('tr');
+                                const target = event.target;
+                                const row = target instanceof HTMLElement ? target.closest('tr') : null;
 
                                 if (!row || !poLineTable.contains(row)) {
                                         return;
                                 }
 
+                                const triggersRecalculation = target.classList.contains('line-quantity')
+                                        || target.classList.contains('line-unit-price')
+                                        || target.classList.contains('line-discount');
                                 const related = event.relatedTarget;
                                 const stillInsideRow = related instanceof HTMLElement && row.contains(related);
 
-                                if (!stillInsideRow) {
+                                if (triggersRecalculation || !stillInsideRow) {
                                         recalculateRow(row);
                                         refreshRunningTotals();
                                 }
@@ -814,10 +818,10 @@
                                         <td class="fw-semibold">${lineNumber}</td>
                                         <td><input type="text" class="form-control form-control-sm line-item-code" value="" /></td>
                                         <td><input type="text" class="form-control form-control-sm line-description" value="" /></td>
-                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-quantity" value="0.00" /></td>
-                                        <td><input type="text" class="form-control form-control-sm line-unit" value="" /></td>
+                                        <td class="column-quantity"><input type="number" step="0.01" class="form-control form-control-sm text-end line-quantity" value="0.00" /></td>
+                                        <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="" /></td>
                                         <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
-                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="0.00" /></td>
+                                        <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="0.00" /></td>
                                         <td class="text-end"><input type="text" class="form-control form-control-sm text-end line-net-price" value="0.00" readonly /></td>
                                         <td class="text-end fw-semibold running-total-cell">0.00</td>
                                         <td class="text-center"><input type="checkbox" class="form-check-input position-static line-vatable" checked aria-label="VATable" /></td>
