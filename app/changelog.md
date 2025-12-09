@@ -73,3 +73,6 @@ l view.
 - 2026-07-16: Updated document titles to reflect the active dashboard view or purchase order being reviewed.
 - 2026-07-17: Forced purchase order header amounts to render with dot decimals in the browser so exclusive, VAT, and inclusive fields no longer show commas as decimal separators.
 - 2026-07-18: Tightened standard line item column widths and recalculated net prices plus totals immediately after exiting quantity, unit price, or discount fields.
+- 2026-07-19: Adjusted standard line inputs to resize item code/description/pricing fields, allow editable text-only prices, enforce whole-number quantities, and accept user-entered net prices when saving lines.
+- 2026-07-20: Moved standard line input sizing classes into admin.css to keep styling centralized.
+- 2026-07-21: Namespaced standard line input sizing rules under #poLineTable to align with other line item styles.

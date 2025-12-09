@@ -21,6 +21,25 @@ body {
     width: 120px;
 }
 
+/* Resize standard line item inputs so compact fields stay narrow while descriptions have room.
+ * Scoped to #poLineTable so the styles only affect purchase order line editing.
+ */
+#poLineTable .line-item-code {
+    max-width: 140px;
+    font-size: 0.85rem;
+}
+
+#poLineTable .line-description {
+    min-width: 260px;
+    font-size: 1rem;
+}
+
+#poLineTable .line-unit-price,
+#poLineTable .line-net-price {
+    max-width: 140px;
+    font-size: 0.85rem;
+}
+
 .layout-shell {
     display: grid;
     grid-template-columns: var(--sidebar-width) 1fr;

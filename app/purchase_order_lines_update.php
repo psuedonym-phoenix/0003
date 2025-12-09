@@ -101,11 +101,14 @@ try {
 
     foreach ($decodedLines as $index => $line) {
         $lineNumber = (int) ($line['line_no'] ?? ($index + 1));
-        $quantity = normalise_number($line['quantity'] ?? 0);
-        $unitPrice = normalise_number($line['unit_price'] ?? 0);
-        $discountPercent = normalise_number($line['discount_percent'] ?? 0);
-        $discountMultiplier = 1 - max(0.0, $discountPercent) / 100;
-        $netPrice = $quantity * $unitPrice * $discountMultiplier;
+        $quantity = (int) round(max(0.0, normalise_number($line['quantity'] ?? 0)));
+        $unitPrice = max(0.0, normalise_number($line['unit_price'] ?? 0));
+        $discountPercent = max(0.0, normalise_number($line['discount_percent'] ?? 0));
+        $discountMultiplier = 1 - $discountPercent / 100;
+        $providedNetPrice = array_key_exists('net_price', $line) ? normalise_number($line['net_price']) : null;
+        $netPrice = $providedNetPrice !== null
+            ? max(0.0, $providedNetPrice)
+            : max(0.0, $quantity * $unitPrice * $discountMultiplier);
         $isVatable = array_key_exists('is_vatable', $line) ? ((bool) $line['is_vatable']) : ($vatPercent > 0);
 
         $exclusiveAmount += $netPrice;
