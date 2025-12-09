@@ -129,7 +129,7 @@ function fetch_purchase_order_view(array $input): array
 
     $poType = $rawPoType === 'transactional' || $rawPoType === 'txn' ? 'transactional' : 'standard';
     // Line column count includes the running total column, VATable flag, and an actions column for editable lines.
-    $lineColumnCount = $poType === 'transactional' ? 9 : 11;
+    $lineColumnCount = $poType === 'transactional' ? 10 : 11;
 
     $navigationSql = "
         SELECT po.po_number
@@ -242,12 +242,20 @@ function fetch_purchase_order_view(array $input): array
 function calculate_line_summary(array $lineItems, string $poType, float $vatPercent): array
 {
     $lineSum = 0.0;
+    $exclusiveSum = 0.0;
+    $vatSum = 0.0;
     $vatRate = max(0.0, $vatPercent);
 
     foreach ($lineItems as $line) {
         if ($poType === 'transactional') {
-            // Transactional rows already include VAT in the stored line total.
-            $lineSum += round((float) ($line['line_total_amount'] ?? 0), 2);
+            $exclusiveAmount = (float) ($line['ex_vat_amount'] ?? 0);
+            $lineVatAmount = (float) ($line['line_vat_amount'] ?? 0);
+            $lineTotalAmount = (float) ($line['line_total_amount'] ?? 0);
+
+            $exclusiveSum += $exclusiveAmount;
+            $vatSum += $lineVatAmount;
+            // If the stored total is missing, fall back to ex VAT + VAT so totals still render.
+            $lineSum += round($lineTotalAmount !== 0.0 ? $lineTotalAmount : ($exclusiveAmount + $lineVatAmount), 2);
             continue;
         }
 
@@ -256,11 +264,15 @@ function calculate_line_summary(array $lineItems, string $poType, float $vatPerc
         $lineIsVatable = !isset($line['is_vatable']) || (int) $line['is_vatable'] === 1;
         $lineVat = $lineIsVatable ? ($lineNet * $vatRate) : 0.0;
 
+        $exclusiveSum += $lineNet;
+        $vatSum += $lineVat;
         $lineSum += round($lineNet + $lineVat, 2);
     }
 
     return [
         'count' => count($lineItems),
+        'exclusive_sum' => round($exclusiveSum, 2),
+        'vat_sum' => round($vatSum, 2),
         'sum' => round($lineSum, 2),
     ];
 }

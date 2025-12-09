@@ -90,14 +90,8 @@ try {
         ]);
     }
 
-    $poType = $purchaseOrder['po_type'] ?? $purchaseOrder['order_type'] ?? 'standard';
-
-    if ($poType === 'transactional') {
-        respond(400, [
-            'success' => false,
-            'message' => 'Transactional purchase orders cannot be edited via this screen.',
-        ]);
-    }
+    $poType = strtolower((string) ($purchaseOrder['po_type'] ?? $purchaseOrder['order_type'] ?? 'standard'));
+    $isTransactional = $poType === 'transactional';
 
     // Only the latest version of a purchase order may be edited to preserve history.
     $latestStmt = $pdo->prepare('SELECT MAX(id) FROM purchase_orders WHERE po_number = :po_number');
@@ -117,6 +111,7 @@ try {
     $lines = [];
     $exclusiveAmount = 0.0;
     $vatAmount = 0.0;
+    $totalAmount = 0.0;
 
     if (empty($decodedLines)) {
         respond(400, [
@@ -125,51 +120,89 @@ try {
         ]);
     }
 
-    foreach ($decodedLines as $index => $line) {
-        $lineNumber = (int) ($line['line_no'] ?? ($index + 1));
-        $quantity = max(0.0, normalise_number($line['quantity'] ?? 0));
-        // Permit negative unit prices so credits/adjustments are preserved instead of being zeroed out.
-        $unitPrice = normalise_number($line['unit_price'] ?? 0);
-        $discountPercent = max(0.0, normalise_number($line['discount_percent'] ?? 0));
-        $discountMultiplier = 1 - $discountPercent / 100;
-        $providedNetPrice = array_key_exists('net_price', $line) ? normalise_number($line['net_price']) : null;
-        $netPrice = $providedNetPrice !== null
-            ? $providedNetPrice
-            : $quantity * $unitPrice * $discountMultiplier;
-        $isVatable = array_key_exists('is_vatable', $line) ? ((bool) $line['is_vatable']) : ($vatPercent > 0);
+    if ($isTransactional) {
+        foreach ($decodedLines as $index => $line) {
+            $description = trim((string) ($line['description'] ?? ''));
+            $depositAmount = normalise_number($line['deposit_amount'] ?? 0);
+            $exVatAmount = normalise_number($line['ex_vat_amount'] ?? 0);
+            $lineVatAmount = normalise_number($line['line_vat_amount'] ?? 0);
+            $lineTotalAmount = normalise_number($line['line_total_amount'] ?? ($exVatAmount + $lineVatAmount));
+            $lineDate = trim((string) ($line['line_date'] ?? ''));
+            $isVatable = array_key_exists('is_vatable', $line) ? ((bool) $line['is_vatable']) : true;
 
-        $description = trim((string) ($line['description'] ?? ''));
-        $itemCode = trim((string) ($line['item_code'] ?? ''));
+            if ($description === '' && $depositAmount === 0.0 && $exVatAmount === 0.0 && $lineVatAmount === 0.0 && $lineTotalAmount === 0.0) {
+                continue;
+            }
 
-        // Ignore placeholder rows that have no identifying data and no value attached.
-        if ($itemCode === '' && $description === '' && $quantity <= 0 && $netPrice <= 0) {
-            continue;
+            if ($description === '') {
+                respond(400, [
+                    'success' => false,
+                    'message' => 'Each line must include a description.',
+                ]);
+            }
+
+            $lineNumber = count($lines) + 1;
+
+            $exclusiveAmount += $exVatAmount;
+            $vatAmount += $lineVatAmount;
+            $totalAmount += $lineTotalAmount;
+
+            $lines[] = [
+                'line_no' => $lineNumber,
+                'line_date' => $lineDate,
+                'description' => $description,
+                'deposit_amount' => $depositAmount,
+                'ex_vat_amount' => $exVatAmount,
+                'line_vat_amount' => $lineVatAmount,
+                'line_total_amount' => $lineTotalAmount,
+                'is_vatable' => $isVatable ? 1 : 0,
+            ];
         }
+    } else {
+        foreach ($decodedLines as $index => $line) {
+            $lineNumber = (int) ($line['line_no'] ?? ($index + 1));
+            $quantity = max(0.0, normalise_number($line['quantity'] ?? 0));
+            // Permit negative unit prices so credits/adjustments are preserved instead of being zeroed out.
+            $unitPrice = normalise_number($line['unit_price'] ?? 0);
+            $discountPercent = max(0.0, normalise_number($line['discount_percent'] ?? 0));
+            $discountMultiplier = 1 - $discountPercent / 100;
+            $providedNetPrice = array_key_exists('net_price', $line) ? normalise_number($line['net_price']) : null;
+            $netPrice = $providedNetPrice !== null
+                ? $providedNetPrice
+                : $quantity * $unitPrice * $discountMultiplier;
+            $isVatable = array_key_exists('is_vatable', $line) ? ((bool) $line['is_vatable']) : ($vatPercent > 0);
 
-        if ($itemCode === '' && $description === '') {
-            respond(400, [
-                'success' => false,
-                'message' => 'Each line must include either an item code or a description.',
-            ]);
+            $description = trim((string) ($line['description'] ?? ''));
+            $itemCode = trim((string) ($line['item_code'] ?? ''));
+
+            if ($itemCode === '' && $description === '' && $quantity <= 0 && $netPrice <= 0) {
+                continue;
+            }
+
+            if ($itemCode === '' && $description === '') {
+                respond(400, [
+                    'success' => false,
+                    'message' => 'Each line must include either an item code or a description.',
+                ]);
+            }
+
+            $lineNumber = count($lines) + 1;
+
+            $exclusiveAmount += $netPrice;
+            $vatAmount += $isVatable ? ($netPrice * $vatRate) : 0.0;
+
+            $lines[] = [
+                'line_no' => $lineNumber,
+                'item_code' => $itemCode,
+                'description' => $description,
+                'quantity' => $quantity,
+                'unit' => trim((string) ($line['unit'] ?? '')),
+                'unit_price' => $unitPrice,
+                'discount_percent' => $discountPercent,
+                'net_price' => $netPrice,
+                'is_vatable' => $isVatable ? 1 : 0,
+            ];
         }
-
-        // Renumber once blanks are removed so we avoid duplicate line numbers.
-        $lineNumber = count($lines) + 1;
-
-        $exclusiveAmount += $netPrice;
-        $vatAmount += $isVatable ? ($netPrice * $vatRate) : 0.0;
-
-        $lines[] = [
-            'line_no' => $lineNumber,
-            'item_code' => $itemCode,
-            'description' => $description,
-            'quantity' => $quantity,
-            'unit' => trim((string) ($line['unit'] ?? '')),
-            'unit_price' => $unitPrice,
-            'discount_percent' => $discountPercent,
-            'net_price' => $netPrice,
-            'is_vatable' => $isVatable ? 1 : 0,
-        ];
     }
 
     if (empty($lines)) {
@@ -179,7 +212,9 @@ try {
         ]);
     }
 
-    $totalAmount = $exclusiveAmount + $vatAmount;
+    if (!$isTransactional) {
+        $totalAmount = $exclusiveAmount + $vatAmount;
+    }
 
     $pdo->beginTransaction();
 
@@ -240,35 +275,65 @@ try {
     }
 
     // Store the updated line items against the chosen header version.
-    $lineInsert = $pdo->prepare(
-        'INSERT INTO purchase_order_lines (
-            purchase_order_id, po_number, supplier_code, supplier_name, line_no, line_type,
-            item_code, description, quantity, unit, unit_price, discount_percent, net_price, is_vatable
-        ) VALUES (
-            :purchase_order_id, :po_number, :supplier_code, :supplier_name, :line_no, :line_type,
-            :item_code, :description, :quantity, :unit, :unit_price, :discount_percent, :net_price, :is_vatable
-        )'
-    );
+    if ($isTransactional) {
+        $lineInsert = $pdo->prepare(
+            'INSERT INTO purchase_order_lines (
+                purchase_order_id, po_number, supplier_code, supplier_name, line_no, line_type,
+                line_date, description, deposit_amount, ex_vat_amount, line_vat_amount, line_total_amount, is_vatable
+            ) VALUES (
+                :purchase_order_id, :po_number, :supplier_code, :supplier_name, :line_no, :line_type,
+                :line_date, :description, :deposit_amount, :ex_vat_amount, :line_vat_amount, :line_total_amount, :is_vatable
+            )'
+        );
+    } else {
+        $lineInsert = $pdo->prepare(
+            'INSERT INTO purchase_order_lines (
+                purchase_order_id, po_number, supplier_code, supplier_name, line_no, line_type,
+                item_code, description, quantity, unit, unit_price, discount_percent, net_price, is_vatable
+            ) VALUES (
+                :purchase_order_id, :po_number, :supplier_code, :supplier_name, :line_no, :line_type,
+                :item_code, :description, :quantity, :unit, :unit_price, :discount_percent, :net_price, :is_vatable
+            )'
+        );
+    }
 
     foreach ($lines as $line) {
-        $lineInsert->execute([
-            ':purchase_order_id' => $targetPurchaseOrderId,
-            ':po_number' => $purchaseOrder['po_number'] ?? null,
-            ':supplier_code' => $purchaseOrder['supplier_code'] ?? null,
-            ':supplier_name' => $purchaseOrder['supplier_name'] ?? null,
-            ':line_no' => $line['line_no'],
-            ':line_type' => $purchaseOrder['line_type'] ?? 'standard',
-            ':item_code' => $line['item_code'],
-            ':description' => $line['description'],
-            ':quantity' => $line['quantity'],
-            ':unit' => $line['unit'],
-            ':unit_price' => $line['unit_price'],
-            ':discount_percent' => $line['discount_percent'],
-            ':net_price' => $line['net_price'],
-            ':is_vatable' => $line['is_vatable'],
-        ]);
+        if ($isTransactional) {
+            $lineInsert->execute([
+                ':purchase_order_id' => $targetPurchaseOrderId,
+                ':po_number' => $purchaseOrder['po_number'] ?? null,
+                ':supplier_code' => $purchaseOrder['supplier_code'] ?? null,
+                ':supplier_name' => $purchaseOrder['supplier_name'] ?? null,
+                ':line_no' => $line['line_no'],
+                ':line_type' => $poType,
+                ':line_date' => $line['line_date'],
+                ':description' => $line['description'],
+                ':deposit_amount' => $line['deposit_amount'],
+                ':ex_vat_amount' => $line['ex_vat_amount'],
+                ':line_vat_amount' => $line['line_vat_amount'],
+                ':line_total_amount' => $line['line_total_amount'],
+                ':is_vatable' => $line['is_vatable'],
+            ]);
+        } else {
+            $lineInsert->execute([
+                ':purchase_order_id' => $targetPurchaseOrderId,
+                ':po_number' => $purchaseOrder['po_number'] ?? null,
+                ':supplier_code' => $purchaseOrder['supplier_code'] ?? null,
+                ':supplier_name' => $purchaseOrder['supplier_name'] ?? null,
+                ':line_no' => $line['line_no'],
+                ':line_type' => $poType,
+                ':item_code' => $line['item_code'],
+                ':description' => $line['description'],
+                ':quantity' => $line['quantity'],
+                ':unit' => $line['unit'],
+                ':unit_price' => $line['unit_price'],
+                ':discount_percent' => $line['discount_percent'],
+                ':net_price' => $line['net_price'],
+                ':is_vatable' => $line['is_vatable'],
+            ]);
 
-        ensure_unit_catalogued($pdo, $line['unit']);
+            ensure_unit_catalogued($pdo, $line['unit']);
+        }
     }
 
     $pdo->commit();
