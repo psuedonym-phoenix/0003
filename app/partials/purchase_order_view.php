@@ -500,6 +500,7 @@
                 })), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
                 const unitOptions = <?php echo json_encode(array_values(array_map('strval', $unitOptions)), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
                 const unitDatalist = document.getElementById('unitOptionsDatalist');
+                let saveLinesHandler = null;
                 let suggestionDebounce = null;
 
                 function showAlert(type, message) {
@@ -690,6 +691,14 @@
                                 event.preventDefault();
                                 clearAlert();
 
+                                // When lines are editable, save them alongside the header so both datasets stay in sync.
+                                if (typeof saveLinesHandler === 'function') {
+                                        const lineSaveResult = await saveLinesHandler(true);
+                                        if (!lineSaveResult?.success) {
+                                                return;
+                                        }
+                                }
+
                                 const formData = new FormData(form);
                                 showAlert('info', 'Saving purchase order header...');
 
@@ -705,7 +714,8 @@
                                                 throw new Error(data.message || 'Unable to update the purchase order header.');
                                         }
 
-                                        sessionStorage.setItem('poUpdateNotice', data.message || 'Purchase order header updated successfully.');
+                                        const combinedMessage = data.message || 'Purchase order header updated successfully.';
+                                        sessionStorage.setItem('poUpdateNotice', combinedMessage);
                                         window.location.reload();
                                 } catch (error) {
                                         showAlert('danger', error.message);
@@ -1027,7 +1037,7 @@
                                 return populatedRows;
                         }
 
-                        async function saveLines() {
+                        async function saveLines(skipReload = false) {
                                 clearAlert();
                                 const lines = collectLines();
                                 if (lines.length === 0) {
@@ -1068,18 +1078,27 @@
                                                 throw new Error(errorDetail || 'Unable to update purchase order lines.');
                                         }
 
-                                        sessionStorage.setItem('poUpdateNotice', data.message || 'Purchase order lines updated successfully.');
+                                        const successMessage = data.message || 'Purchase order lines updated successfully.';
+                                        if (skipReload) {
+                                                return { success: true, message: successMessage };
+                                        }
+
+                                        sessionStorage.setItem('poUpdateNotice', successMessage);
                                         window.location.reload();
+                                        return { success: true, message: successMessage };
                                 } catch (error) {
                                         const errorMessage = error instanceof Error
                                                 ? error.message
                                                 : 'Unable to update purchase order lines. Please try again.';
                                         showAlert('danger', errorMessage);
+                                        return { success: false, message: errorMessage };
                                 }
                         }
 
+                        saveLinesHandler = saveLines;
+
                         if (saveLinesButton) {
-                                saveLinesButton.addEventListener('click', saveLines);
+                                saveLinesButton.addEventListener('click', () => saveLinesHandler());
                         }
 
                         refreshRunningTotals();
