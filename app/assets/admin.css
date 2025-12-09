@@ -43,6 +43,13 @@ body {
     width: 150px;
 }
 
+#poLineTable .column-deposit,
+#poLineTable .column-ex-vat,
+#poLineTable .column-vat-amount,
+#poLineTable .column-line-total {
+    width: 150px;
+}
+
 #poLineTable .column-discount {
     width: 120px;
 }
