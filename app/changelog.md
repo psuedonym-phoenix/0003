@@ -88,3 +88,4 @@ l view.
 
 - 2025-12-09: Allowed negative unit prices to flow through purchase order line calculations so running totals include credits.
 - 2025-12-09: Preserved negative unit prices during purchase order line saves so credit lines are stored instead of reset to zero.
+- 2026-07-30: Reused the same purchase order version when saving the header and lines together so header saves no longer create duplicate entries.
