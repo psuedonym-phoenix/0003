@@ -84,3 +84,4 @@ l view.
 - 2026-07-26: Surface API error details when saving purchase order lines so alerts show actionable diagnostics.
 - 2026-07-27: Saving the purchase order header now also triggers line saves so both updates happen together from the header button.
 - 2026-07-28: Refreshed the purchase order ID after line saves so subsequent header updates edit the newest version without conflict errors.
+- 2026-07-29: Updated purchase order line input handling so quantity spinner changes immediately recalculate line totals and refresh header exclusive/VAT/inclusive amounts.

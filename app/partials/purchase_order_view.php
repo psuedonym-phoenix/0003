@@ -930,7 +930,24 @@
                         });
 
                         poLineTable.addEventListener('input', (event) => {
-                                if (event.target.classList.contains('line-vatable') || event.target.classList.contains('line-net-price')) {
+                                const target = event.target;
+                                const row = target instanceof HTMLElement ? target.closest('tr') : null;
+
+                                if (!row || !poLineTable.contains(row)) {
+                                        return;
+                                }
+
+                                const recalculatesRow = target.classList.contains('line-quantity')
+                                        || target.classList.contains('line-unit-price')
+                                        || target.classList.contains('line-discount');
+                                const updatesTotalsOnly = target.classList.contains('line-net-price')
+                                        || target.classList.contains('line-vatable');
+
+                                if (recalculatesRow) {
+                                        recalculateRow(row);
+                                }
+
+                                if (recalculatesRow || updatesTotalsOnly) {
                                         refreshRunningTotals();
                                 }
                         });
