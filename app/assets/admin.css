@@ -9,6 +9,18 @@ body {
 }
 
 /* Keep numeric line item fields compact so descriptive columns retain space. */
+#poLineTable .column-line-number {
+    width: 90px;
+}
+
+#poLineTable .column-item-code {
+    width: 150px;
+}
+
+#poLineTable .column-description {
+    min-width: 340px;
+}
+
 #poLineTable .column-quantity {
     width: 110px;
 }
@@ -17,8 +29,18 @@ body {
     width: 90px;
 }
 
+#poLineTable .column-unit-price,
+#poLineTable .column-net-price,
+#poLineTable .column-running-total {
+    width: 150px;
+}
+
 #poLineTable .column-discount {
     width: 120px;
+}
+
+#poLineTable .column-vatable {
+    width: 90px;
 }
 
 /* Resize standard line item inputs so compact fields stay narrow while descriptions have room.
@@ -30,7 +52,7 @@ body {
 }
 
 #poLineTable .line-description {
-    min-width: 260px;
+    min-width: 340px;
     font-size: 1rem;
 }
 

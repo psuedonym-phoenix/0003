@@ -76,3 +76,4 @@ l view.
 - 2026-07-19: Adjusted standard line inputs to resize item code/description/pricing fields, allow editable text-only prices, enforce whole-number quantities, and accept user-entered net prices when saving lines.
 - 2026-07-20: Moved standard line input sizing classes into admin.css to keep styling centralized.
 - 2026-07-21: Namespaced standard line input sizing rules under #poLineTable to align with other line item styles.
+- 2026-07-22: Aligned purchase order line headers with editable cells, renamed the quantity heading to QTY, and widened the description column for readability.
