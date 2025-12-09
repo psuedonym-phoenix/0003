@@ -117,9 +117,16 @@ try {
     $exclusiveAmount = 0.0;
     $vatAmount = 0.0;
 
+    if (empty($decodedLines)) {
+        respond(400, [
+            'success' => false,
+            'message' => 'Add at least one populated line before saving.',
+        ]);
+    }
+
     foreach ($decodedLines as $index => $line) {
         $lineNumber = (int) ($line['line_no'] ?? ($index + 1));
-        $quantity = (int) round(max(0.0, normalise_number($line['quantity'] ?? 0)));
+        $quantity = max(0.0, normalise_number($line['quantity'] ?? 0));
         $unitPrice = max(0.0, normalise_number($line['unit_price'] ?? 0));
         $discountPercent = max(0.0, normalise_number($line['discount_percent'] ?? 0));
         $discountMultiplier = 1 - $discountPercent / 100;
@@ -129,13 +136,31 @@ try {
             : max(0.0, $quantity * $unitPrice * $discountMultiplier);
         $isVatable = array_key_exists('is_vatable', $line) ? ((bool) $line['is_vatable']) : ($vatPercent > 0);
 
+        $description = trim((string) ($line['description'] ?? ''));
+        $itemCode = trim((string) ($line['item_code'] ?? ''));
+
+        // Ignore placeholder rows that have no identifying data and no value attached.
+        if ($itemCode === '' && $description === '' && $quantity <= 0 && $netPrice <= 0) {
+            continue;
+        }
+
+        if ($itemCode === '' && $description === '') {
+            respond(400, [
+                'success' => false,
+                'message' => 'Each line must include either an item code or a description.',
+            ]);
+        }
+
+        // Renumber once blanks are removed so we avoid duplicate line numbers.
+        $lineNumber = count($lines) + 1;
+
         $exclusiveAmount += $netPrice;
         $vatAmount += $isVatable ? ($netPrice * $vatRate) : 0.0;
 
         $lines[] = [
             'line_no' => $lineNumber,
-            'item_code' => trim((string) ($line['item_code'] ?? '')),
-            'description' => trim((string) ($line['description'] ?? '')),
+            'item_code' => $itemCode,
+            'description' => $description,
             'quantity' => $quantity,
             'unit' => trim((string) ($line['unit'] ?? '')),
             'unit_price' => $unitPrice,
@@ -143,6 +168,13 @@ try {
             'net_price' => $netPrice,
             'is_vatable' => $isVatable ? 1 : 0,
         ];
+    }
+
+    if (empty($lines)) {
+        respond(400, [
+            'success' => false,
+            'message' => 'No valid line items were provided. Please fill in at least one line before saving.',
+        ]);
     }
 
     $totalAmount = $exclusiveAmount + $vatAmount;

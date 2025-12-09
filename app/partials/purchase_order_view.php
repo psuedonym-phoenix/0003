@@ -999,22 +999,47 @@
                         function collectLines() {
                                 const rows = Array.from(poLineTable.querySelectorAll('tbody tr'));
 
-                                return rows.map((row, index) => ({
-                                        line_no: index + 1,
-                                        item_code: (row.querySelector('.line-item-code')?.value || '').trim(),
-                                        description: (row.querySelector('.line-description')?.value || '').trim(),
-                                        quantity: Math.max(0, toNumber(row.querySelector('.line-quantity')?.value || 0)),
-                                        unit: (row.querySelector('.line-unit')?.value || '').trim(),
-                                        unit_price: roundCurrency(toNumber(row.querySelector('.line-unit-price')?.value || 0)),
-                                        discount_percent: toNumber(row.querySelector('.line-discount')?.value || 0),
-                                        net_price: roundCurrency(toNumber(row.querySelector('.line-net-price')?.value || 0)),
-                                        is_vatable: row.querySelector('.line-vatable')?.checked !== false,
-                                }));
+                                const populatedRows = rows
+                                        .map((row, index) => ({
+                                                line_no: index + 1,
+                                                item_code: (row.querySelector('.line-item-code')?.value || '').trim(),
+                                                description: (row.querySelector('.line-description')?.value || '').trim(),
+                                                quantity: Math.max(0, toNumber(row.querySelector('.line-quantity')?.value || 0)),
+                                                unit: (row.querySelector('.line-unit')?.value || '').trim(),
+                                                unit_price: roundCurrency(toNumber(row.querySelector('.line-unit-price')?.value || 0)),
+                                                discount_percent: toNumber(row.querySelector('.line-discount')?.value || 0),
+                                                net_price: roundCurrency(toNumber(row.querySelector('.line-net-price')?.value || 0)),
+                                                is_vatable: row.querySelector('.line-vatable')?.checked !== false,
+                                        }))
+                                        // Ignore entirely blank placeholder rows to avoid server-side errors.
+                                        .filter((line) =>
+                                                line.item_code !== '' ||
+                                                line.description !== '' ||
+                                                line.quantity > 0 ||
+                                                line.net_price > 0
+                                        )
+                                        .map((line, index) => ({
+                                                ...line,
+                                                // Re-number after blank rows are removed so line numbers remain contiguous.
+                                                line_no: index + 1,
+                                        }));
+
+                                return populatedRows;
                         }
 
                         async function saveLines() {
                                 clearAlert();
                                 const lines = collectLines();
+                                if (lines.length === 0) {
+                                        showAlert('danger', 'Add at least one populated line before saving.');
+                                        return;
+                                }
+
+                                const missingDescriptions = lines.filter((line) => line.description === '' && line.item_code === '');
+                                if (missingDescriptions.length > 0) {
+                                        showAlert('danger', 'Each saved line needs either an item code or a description.');
+                                        return;
+                                }
                                 refreshRunningTotals();
 
                                 const vatPercent = toNumber(vatPercentInput ? vatPercentInput.value : 0);
