@@ -80,3 +80,4 @@ l view.
 - 2026-07-23: Centered the QTY column header and allowed decimal quantities while keeping spinner controls incrementing by one.
 - 2026-07-24: Added a UOM catalogue with seeded defaults, fuzzy dropdown suggestions on purchase order lines, and automatic cataloguing of new units when saving edits.
 - 2026-07-25: Added delete actions to standard purchase order lines, defaulted new lines to "each" UOM, and aligned UOM header/content positions.
+- 2025-12-09: Prevented blank purchase order lines from being sent or saved, enforced line validation, and clarified the save error shown when no usable lines exist.
