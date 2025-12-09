@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $purchaseOrderId = filter_input(INPUT_POST, 'purchase_order_id', FILTER_VALIDATE_INT);
 $vatPercentInput = filter_input(INPUT_POST, 'vat_percent', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
 $rawLines = $_POST['lines'] ?? '[]';
+$updateCurrentHeader = ($_POST['update_current_header'] ?? '') === '1';
 
 if (!$purchaseOrderId) {
     respond(400, [
@@ -182,34 +183,63 @@ try {
 
     $pdo->beginTransaction();
 
-    // Prepare an updated header by cloning the current row and refreshing financial amounts.
-    $updatedOrder = $purchaseOrder;
-    //$updatedOrder['exclusive_amount'] = $exclusiveAmount;
-    $updatedOrder['subtotal'] = $exclusiveAmount;
-    $updatedOrder['vat_percent'] = $vatPercent;
-    $updatedOrder['vat_amount'] = $vatAmount;
-    $updatedOrder['total_amount'] = $totalAmount;
-    $updatedOrder['created_at'] = date('Y-m-d H:i:s');
+    // Decide whether to update the current header or create a new version.
+    $targetPurchaseOrderId = $purchaseOrderId;
 
-    unset($updatedOrder['id']);
+    if ($updateCurrentHeader === false) {
+        // Prepare an updated header by cloning the current row and refreshing financial amounts.
+        $updatedOrder = $purchaseOrder;
+        //$updatedOrder['exclusive_amount'] = $exclusiveAmount;
+        $updatedOrder['subtotal'] = $exclusiveAmount;
+        $updatedOrder['vat_percent'] = $vatPercent;
+        $updatedOrder['vat_amount'] = $vatAmount;
+        $updatedOrder['total_amount'] = $totalAmount;
+        $updatedOrder['created_at'] = date('Y-m-d H:i:s');
 
-    $columns = array_keys($updatedOrder);
-    $placeholders = array_map(static function ($column) {
-        return ':' . $column;
-    }, $columns);
+        unset($updatedOrder['id']);
 
-    $insertSql = 'INSERT INTO purchase_orders (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
-    $insertStmt = $pdo->prepare($insertSql);
+        $columns = array_keys($updatedOrder);
+        $placeholders = array_map(static function ($column) {
+            return ':' . $column;
+        }, $columns);
 
-    $insertParams = [];
-    foreach ($columns as $column) {
-        $insertParams[':' . $column] = $updatedOrder[$column];
+        $insertSql = 'INSERT INTO purchase_orders (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+        $insertStmt = $pdo->prepare($insertSql);
+
+        $insertParams = [];
+        foreach ($columns as $column) {
+            $insertParams[':' . $column] = $updatedOrder[$column];
+        }
+
+        $insertStmt->execute($insertParams);
+        $targetPurchaseOrderId = (int) $pdo->lastInsertId();
+    } else {
+        // Refresh the financial amounts on the existing latest header so the header save
+        // can be followed by a single lines save without creating a duplicate version.
+        $updateHeader = $pdo->prepare(
+            'UPDATE purchase_orders
+             SET subtotal = :subtotal,
+                 vat_percent = :vat_percent,
+                 vat_amount = :vat_amount,
+                 total_amount = :total_amount,
+                 created_at = NOW()
+             WHERE id = :id'
+        );
+
+        $updateHeader->execute([
+            ':subtotal' => $exclusiveAmount,
+            ':vat_percent' => $vatPercent,
+            ':vat_amount' => $vatAmount,
+            ':total_amount' => $totalAmount,
+            ':id' => $purchaseOrderId,
+        ]);
+
+        // Clear any existing lines on the target header before re-inserting the updated set.
+        $deleteLines = $pdo->prepare('DELETE FROM purchase_order_lines WHERE purchase_order_id = :purchase_order_id');
+        $deleteLines->execute([':purchase_order_id' => $purchaseOrderId]);
     }
 
-    $insertStmt->execute($insertParams);
-    $newPurchaseOrderId = (int) $pdo->lastInsertId();
-
-    // Store the updated line items against the new header version.
+    // Store the updated line items against the chosen header version.
     $lineInsert = $pdo->prepare(
         'INSERT INTO purchase_order_lines (
             purchase_order_id, po_number, supplier_code, supplier_name, line_no, line_type,
@@ -222,7 +252,7 @@ try {
 
     foreach ($lines as $line) {
         $lineInsert->execute([
-            ':purchase_order_id' => $newPurchaseOrderId,
+            ':purchase_order_id' => $targetPurchaseOrderId,
             ':po_number' => $purchaseOrder['po_number'] ?? null,
             ':supplier_code' => $purchaseOrder['supplier_code'] ?? null,
             ':supplier_name' => $purchaseOrder['supplier_name'] ?? null,
@@ -246,7 +276,7 @@ try {
     respond(200, [
         'success' => true,
         'message' => 'Purchase order lines updated successfully.',
-        'purchase_order_id' => $newPurchaseOrderId,
+        'purchase_order_id' => $targetPurchaseOrderId,
         'total_amount' => $totalAmount,
     ]);
 } catch (Throwable $exception) {

@@ -493,6 +493,7 @@
                 const supplierCodeInput = document.getElementById('supplierCode');
                 const supplierInput = document.getElementById('supplierInput');
                 const supplierSuggestions = document.getElementById('supplierSuggestions');
+                const purchaseOrderIdInput = document.querySelector('input[name="purchase_order_id"]');
                 const supplierOptions = <?php echo json_encode(array_values(array_filter(array_map(static function ($supplier) {
                         return [
                                 'name' => $supplier['supplier_name'] ?? '',
@@ -505,6 +506,7 @@
                 const unitDatalist = document.getElementById('unitOptionsDatalist');
                 let saveLinesHandler = null;
                 let suggestionDebounce = null;
+                let purchaseOrderId = purchaseOrderIdInput ? Number(purchaseOrderIdInput.value) : null;
 
                 function showAlert(type, message) {
                         if (!alertBox) {
@@ -694,14 +696,6 @@
                                 event.preventDefault();
                                 clearAlert();
 
-                                // When lines are editable, save them alongside the header so both datasets stay in sync.
-                                if (typeof saveLinesHandler === 'function') {
-                                        const lineSaveResult = await saveLinesHandler(true);
-                                        if (!lineSaveResult?.success) {
-                                                return;
-                                        }
-                                }
-
                                 const formData = new FormData(form);
                                 showAlert('info', 'Saving purchase order header...');
 
@@ -717,11 +711,43 @@
                                                 throw new Error(data.message || 'Unable to update the purchase order header.');
                                         }
 
-                                        const combinedMessage = data.message || 'Purchase order header updated successfully.';
+                                        const updatedPurchaseOrderId = Number(data.purchaseOrder?.id ?? purchaseOrderId ?? 0) || null;
+
+                                        if (updatedPurchaseOrderId) {
+                                                purchaseOrderId = updatedPurchaseOrderId;
+
+                                                if (purchaseOrderIdInput) {
+                                                        purchaseOrderIdInput.value = String(updatedPurchaseOrderId);
+                                                }
+                                        }
+
+                                        let combinedMessage = data.message || 'Purchase order header updated successfully.';
+
+                                        // When lines are editable, save them alongside the header using the same version so
+                                        // only one purchase order entry is created.
+                                        if (typeof saveLinesHandler === 'function') {
+                                                const lineSaveResult = await saveLinesHandler({
+                                                        skipReload: true,
+                                                        updateCurrentHeader: true,
+                                                        purchaseOrderIdOverride: purchaseOrderId,
+                                                });
+
+                                                if (!lineSaveResult?.success) {
+                                                        throw new Error(lineSaveResult?.message || 'Unable to update purchase order lines.');
+                                                }
+
+                                                if (lineSaveResult.message) {
+                                                        combinedMessage = `${combinedMessage} ${lineSaveResult.message}`.trim();
+                                                }
+                                        }
+
                                         sessionStorage.setItem('poUpdateNotice', combinedMessage);
                                         window.location.reload();
                                 } catch (error) {
-                                        showAlert('danger', error.message);
+                                        const errorMessage = error instanceof Error
+                                                ? error.message
+                                                : 'Unable to update the purchase order header.';
+                                        showAlert('danger', errorMessage);
                                 }
                         });
                 }
@@ -736,8 +762,6 @@
                         const totalAmountInput = document.getElementById('totalAmount');
                         const addLineButton = document.getElementById('addLineButton');
                         const saveLinesButton = document.getElementById('saveLinesButton');
-                        let purchaseOrderId = <?php echo (int) $purchaseOrder['id']; ?>;
-                        const purchaseOrderIdInput = document.querySelector('input[name="purchase_order_id"]');
 
                         /**
                          * Parse a numeric string safely, returning 0 when invalid.
@@ -1059,8 +1083,18 @@
                                 return populatedRows;
                         }
 
-                        async function saveLines(skipReload = false) {
+                        async function saveLines(options = {}) {
                                 clearAlert();
+                                const skipReload = typeof options === 'boolean'
+                                        ? options
+                                        : Boolean(options.skipReload);
+                                const updateCurrentHeader = typeof options === 'object' && options !== null
+                                        ? Boolean(options.updateCurrentHeader)
+                                        : false;
+                                const purchaseOrderIdOverride = typeof options === 'object' && options !== null
+                                        ? (options.purchaseOrderIdOverride ?? null)
+                                        : null;
+                                const targetPurchaseOrderId = purchaseOrderIdOverride ?? purchaseOrderId;
                                 const lines = collectLines();
                                 if (lines.length === 0) {
                                         showAlert('danger', 'Add at least one populated line before saving.');
@@ -1076,9 +1110,12 @@
 
                                 const vatPercent = toNumber(vatPercentInput ? vatPercentInput.value : 0);
                                 const payload = new FormData();
-                                payload.set('purchase_order_id', String(purchaseOrderId));
+                                payload.set('purchase_order_id', String(targetPurchaseOrderId));
                                 payload.set('vat_percent', String(vatPercent));
                                 payload.set('lines', JSON.stringify(lines));
+                                if (updateCurrentHeader) {
+                                        payload.set('update_current_header', '1');
+                                }
 
                                 try {
                                         showAlert('info', 'Saving line changes...');
