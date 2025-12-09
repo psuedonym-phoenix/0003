@@ -383,7 +383,7 @@
                                 <table class="table table-sm align-middle mb-0" id="poLineTable" data-po-type="<?php echo e($poType); ?>">
                                         <thead class="table-light">
                                                 <tr>
-                                                        <th scope="col">Line #</th>
+                                                        <th scope="col" class="column-line-number">Line #</th>
 							<?php if ($poType === 'transactional') : ?>
 							<th scope="col">Date</th>
 							<th scope="col">Description</th>
@@ -394,15 +394,15 @@
 							<th scope="col" class="text-end">Running Total</th>
 							<th scope="col" class="text-center">VATable</th>
 							<?php else : ?>
-							<th scope="col">Item Code</th>
-							<th scope="col">Description</th>
-                                                        <th scope="col" class="text-end column-quantity">Quantity</th>
+                                                        <th scope="col" class="column-item-code">Item Code</th>
+                                                        <th scope="col" class="column-description">Description</th>
+                                                        <th scope="col" class="text-end column-quantity">QTY</th>
                                                         <th scope="col" class="column-unit">Unit</th>
-                                                        <th scope="col" class="text-end">Unit Price</th>
+                                                        <th scope="col" class="text-end column-unit-price">Unit Price</th>
                                                         <th scope="col" class="text-end column-discount">Discount %</th>
-                                                        <th scope="col" class="text-end">Net Price</th>
-                                                        <th scope="col" class="text-end">Running Total</th>
-                                                        <th scope="col" class="text-center">VATable</th>
+                                                        <th scope="col" class="text-end column-net-price">Net Price</th>
+                                                        <th scope="col" class="text-end column-running-total">Running Total</th>
+                                                        <th scope="col" class="text-center column-vatable">VATable</th>
 							<?php endif; ?>
 						</tr>
 					</thead>
@@ -421,7 +421,7 @@
                                                         : ((int) $line['is_vatable'] === 1);
                                                 ?>
                                                 <tr class="<?php echo $poType === 'transactional' ? '' : 'font-monospace'; ?>" data-line-no="<?php echo e($line['line_no'] ?? ''); ?>">
-                                                        <td class="fw-semibold"><?php echo e((string) ($line['line_no'] ?? '')); ?></td>
+                                                        <td class="fw-semibold column-line-number"><?php echo e((string) ($line['line_no'] ?? '')); ?></td>
                                                         <?php if ($poType === 'transactional') : ?>
                                                         <td><?php echo e($line['line_date'] ?? ''); ?></td>
                                                         <td><?php echo e($line['description'] ?? ''); ?></td>
@@ -442,17 +442,17 @@
                                                                 />
                                                         </td>
                                                         <?php else : ?>
-                                                        <td><input type="text" class="form-control form-control-sm line-item-code" value="<?php echo e($line['item_code'] ?? ''); ?>" /></td>
-                                                        <td><input type="text" class="form-control form-control-sm line-description" value="<?php echo e($line['description'] ?? ''); ?>" /></td>
+                                                        <td class="column-item-code"><input type="text" class="form-control form-control-sm line-item-code" value="<?php echo e($line['item_code'] ?? ''); ?>" /></td>
+                                                        <td class="column-description"><input type="text" class="form-control form-control-sm line-description" value="<?php echo e($line['description'] ?? ''); ?>" /></td>
                                                         <td class="column-quantity"><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end line-quantity" value="<?php echo number_format((float) ($line['quantity'] ?? 0), 0, '.', ''); ?>" /></td>
                                                         <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="<?php echo e($line['unit'] ?? ''); ?>" /></td>
-                                                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
+                                                        <td class="column-unit-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <?php $lineNetPrice = round_currency((float) ($line['net_price'] ?? 0)); ?>
                                                         <?php $runningTotal = round_currency($runningTotal + $lineNetPrice); ?>
-                                                        <td class="text-end"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-net-price" value="<?php echo number_format($lineNetPrice, 2, '.', ''); ?>" /></td>
-                                                        <td class="text-end fw-semibold running-total-cell"><?php echo number_format($runningTotal, 2); ?></td>
-                                                        <td class="text-center">
+                                                        <td class="text-end column-net-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-net-price" value="<?php echo number_format($lineNetPrice, 2, '.', ''); ?>" /></td>
+                                                        <td class="text-end fw-semibold running-total-cell column-running-total"><?php echo number_format($runningTotal, 2); ?></td>
+                                                        <td class="text-center column-vatable">
                                                                 <input
                                                                 type="checkbox"
                                                                 class="form-check-input position-static line-vatable"
@@ -887,16 +887,16 @@
                                 const template = document.createElement('tr');
                                 template.className = 'font-monospace';
                                 template.innerHTML = `
-                                        <td class="fw-semibold">${lineNumber}</td>
-                                        <td><input type="text" class="form-control form-control-sm line-item-code" value="" /></td>
-                                        <td><input type="text" class="form-control form-control-sm line-description" value="" /></td>
+                                        <td class="fw-semibold column-line-number">${lineNumber}</td>
+                                        <td class="column-item-code"><input type="text" class="form-control form-control-sm line-item-code" value="" /></td>
+                                        <td class="column-description"><input type="text" class="form-control form-control-sm line-description" value="" /></td>
                                         <td class="column-quantity"><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end line-quantity" value="0" /></td>
                                         <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="" /></td>
-                                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
+                                        <td class="column-unit-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="0.00" /></td>
-                                        <td class="text-end"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-net-price" value="0.00" /></td>
-                                        <td class="text-end fw-semibold running-total-cell">0.00</td>
-                                        <td class="text-center"><input type="checkbox" class="form-check-input position-static line-vatable" checked aria-label="VATable" /></td>
+                                        <td class="text-end column-net-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-net-price" value="0.00" /></td>
+                                        <td class="text-end fw-semibold running-total-cell column-running-total">0.00</td>
+                                        <td class="text-center column-vatable"><input type="checkbox" class="form-check-input position-static line-vatable" checked aria-label="VATable" /></td>
                                 `;
 
                                 return template;
