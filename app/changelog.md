@@ -85,3 +85,5 @@ l view.
 - 2026-07-27: Saving the purchase order header now also triggers line saves so both updates happen together from the header button.
 - 2026-07-28: Refreshed the purchase order ID after line saves so subsequent header updates edit the newest version without conflict errors.
 - 2026-07-29: Updated purchase order line input handling so quantity spinner changes immediately recalculate line totals and refresh header exclusive/VAT/inclusive amounts.
+
+- 2025-12-09: Allowed negative unit prices to flow through purchase order line calculations so running totals include credits.

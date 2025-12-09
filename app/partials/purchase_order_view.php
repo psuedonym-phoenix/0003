@@ -760,11 +760,12 @@
                         }
 
                         /**
-                         * Calculate the net price for a line using the requested formula.
+                        * Calculate the net price for a line using the requested formula.
                          */
                         function calculateNetPrice(quantity, unitPrice, discountPercent) {
                                 const qty = Math.max(0, quantity);
-                                const price = Math.max(0, unitPrice);
+                                // Allow negative unit prices so credits/refunds reduce totals correctly.
+                                const price = Number(unitPrice) || 0;
                                 const discount = Math.max(0, discountPercent);
                                 const discountMultiplier = 1 - discount / 100;
 
