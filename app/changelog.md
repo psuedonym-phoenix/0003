@@ -72,3 +72,4 @@ l view.
 - 2026-07-15: Rounded purchase order totals during validation and running total calculations so 3-decimal inputs no longer cause inclusive versus total mismatches.
 - 2026-07-16: Updated document titles to reflect the active dashboard view or purchase order being reviewed.
 - 2026-07-17: Forced purchase order header amounts to render with dot decimals in the browser so exclusive, VAT, and inclusive fields no longer show commas as decimal separators.
+- 2026-07-18: Tightened standard line item column widths and recalculated net prices plus totals immediately after exiting quantity, unit price, or discount fields.

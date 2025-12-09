@@ -8,6 +8,19 @@ body {
     font-family: 'Exo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Keep numeric line item fields compact so descriptive columns retain space. */
+#poLineTable .column-quantity {
+    width: 110px;
+}
+
+#poLineTable .column-unit {
+    width: 90px;
+}
+
+#poLineTable .column-discount {
+    width: 120px;
+}
+
 .layout-shell {
     display: grid;
     grid-template-columns: var(--sidebar-width) 1fr;
