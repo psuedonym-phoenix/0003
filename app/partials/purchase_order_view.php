@@ -365,11 +365,11 @@
 
 </div>
 <div class="card border-0 shadow-sm mb-3">
-	<div class="card border-0 shadow-sm">
-		<div class="card-body">
-			<div class="d-flex justify-content-between align-items-center mb-3">
-				<div>
-					<h2 class="h6 mb-0">Line items</h2>
+        <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                        <h2 class="h6 mb-0">Line items</h2>
 					<?php if ($poType === 'transactional') : ?>
 					<small class="text-secondary">Transactional layout showing deposits and VAT breakdowns.</small>
 					<?php else : ?>
@@ -444,13 +444,13 @@
                                                         <?php else : ?>
                                                         <td><input type="text" class="form-control form-control-sm line-item-code" value="<?php echo e($line['item_code'] ?? ''); ?>" /></td>
                                                         <td><input type="text" class="form-control form-control-sm line-description" value="<?php echo e($line['description'] ?? ''); ?>" /></td>
-                                                        <td class="column-quantity"><input type="number" step="0.01" class="form-control form-control-sm text-end line-quantity" value="<?php echo number_format((float) ($line['quantity'] ?? 0), 2, '.', ''); ?>" /></td>
+                                                        <td class="column-quantity"><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end line-quantity" value="<?php echo number_format((float) ($line['quantity'] ?? 0), 0, '.', ''); ?>" /></td>
                                                         <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="<?php echo e($line['unit'] ?? ''); ?>" /></td>
-                                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
+                                                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <?php $lineNetPrice = round_currency((float) ($line['net_price'] ?? 0)); ?>
                                                         <?php $runningTotal = round_currency($runningTotal + $lineNetPrice); ?>
-                                                        <td class="text-end"><input type="text" class="form-control form-control-sm text-end line-net-price" value="<?php echo number_format($lineNetPrice, 2, '.', ''); ?>" readonly /></td>
+                                                        <td class="text-end"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-net-price" value="<?php echo number_format($lineNetPrice, 2, '.', ''); ?>" /></td>
                                                         <td class="text-end fw-semibold running-total-cell"><?php echo number_format($runningTotal, 2); ?></td>
                                                         <td class="text-center">
                                                                 <input
@@ -719,6 +719,64 @@
                         }
 
                         /**
+                         * Strip non-numeric characters and format decimal inputs consistently.
+                         */
+                        function enforceDecimalInput(input) {
+                                if (!input) {
+                                        return;
+                                }
+
+                                input.setAttribute('inputmode', 'decimal');
+
+                                input.addEventListener('input', () => {
+                                        const cleaned = input.value.replace(/[^0-9.,-]/g, '');
+
+                                        if (cleaned !== input.value) {
+                                                input.value = cleaned;
+                                        }
+                                });
+
+                                input.addEventListener('blur', () => {
+                                        const value = roundCurrency(toNumber(input.value));
+                                        input.value = value.toFixed(2);
+                                });
+                        }
+
+                        /**
+                         * Force integer-only entry for quantity fields and tidy values on blur.
+                         */
+                        function enforceIntegerInput(input) {
+                                if (!input) {
+                                        return;
+                                }
+
+                                input.setAttribute('inputmode', 'numeric');
+
+                                input.addEventListener('input', () => {
+                                        const cleaned = input.value.replace(/[^0-9-]/g, '');
+
+                                        if (cleaned !== input.value) {
+                                                input.value = cleaned;
+                                        }
+                                });
+
+                                input.addEventListener('blur', () => {
+                                        const value = Math.max(0, Math.round(toNumber(input.value)));
+                                        input.value = String(value);
+                                });
+                        }
+
+                        function applyRowInputConstraints(row) {
+                                if (!row) {
+                                        return;
+                                }
+
+                                enforceDecimalInput(row.querySelector('.line-unit-price'));
+                                enforceDecimalInput(row.querySelector('.line-net-price'));
+                                enforceIntegerInput(row.querySelector('.line-quantity'));
+                        }
+
+                        /**
                          * Normalise displayed currency values so users can see running totals update cleanly.
                          */
                         function formatCurrency(value) {
@@ -764,6 +822,9 @@
                                 }
                         }
 
+                        Array.from(poLineTable.querySelectorAll('tbody tr')).forEach(applyRowInputConstraints);
+                        refreshRunningTotals();
+
                         /**
                          * Recalculate the net price for a row when the user exits the row.
                          */
@@ -777,12 +838,13 @@
                                         return;
                                 }
 
-                                const quantity = toNumber(quantityInput.value);
+                                const quantity = Math.max(0, Math.round(toNumber(quantityInput.value)));
                                 const unitPrice = toNumber(unitPriceInput.value);
                                 const discount = toNumber(discountInput.value);
                                 const netPrice = calculateNetPrice(quantity, unitPrice, discount);
 
-                                netPriceInput.value = netPrice.toFixed(2);
+                                quantityInput.value = String(quantity);
+                                netPriceInput.value = formatCurrency(netPrice);
                         }
 
                         poLineTable.addEventListener('focusout', (event) => {
@@ -799,14 +861,24 @@
                                 const related = event.relatedTarget;
                                 const stillInsideRow = related instanceof HTMLElement && row.contains(related);
 
-                                if (triggersRecalculation || !stillInsideRow) {
+                                if (triggersRecalculation) {
                                         recalculateRow(row);
+                                        refreshRunningTotals();
+                                }
+
+                                if (target.classList.contains('line-net-price')) {
+                                        const netPriceInput = row.querySelector('.line-net-price');
+
+                                        if (netPriceInput) {
+                                                netPriceInput.value = formatCurrency(toNumber(netPriceInput.value));
+                                        }
+
                                         refreshRunningTotals();
                                 }
                         });
 
                         poLineTable.addEventListener('input', (event) => {
-                                if (event.target.classList.contains('line-vatable')) {
+                                if (event.target.classList.contains('line-vatable') || event.target.classList.contains('line-net-price')) {
                                         refreshRunningTotals();
                                 }
                         });
@@ -818,11 +890,11 @@
                                         <td class="fw-semibold">${lineNumber}</td>
                                         <td><input type="text" class="form-control form-control-sm line-item-code" value="" /></td>
                                         <td><input type="text" class="form-control form-control-sm line-description" value="" /></td>
-                                        <td class="column-quantity"><input type="number" step="0.01" class="form-control form-control-sm text-end line-quantity" value="0.00" /></td>
+                                        <td class="column-quantity"><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end line-quantity" value="0" /></td>
                                         <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="" /></td>
-                                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
+                                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="0.00" /></td>
-                                        <td class="text-end"><input type="text" class="form-control form-control-sm text-end line-net-price" value="0.00" readonly /></td>
+                                        <td class="text-end"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-net-price" value="0.00" /></td>
                                         <td class="text-end fw-semibold running-total-cell">0.00</td>
                                         <td class="text-center"><input type="checkbox" class="form-check-input position-static line-vatable" checked aria-label="VATable" /></td>
                                 `;
@@ -840,6 +912,8 @@
                                         const nextLineNumber = tbody.children.length + 1;
                                         const newRow = buildEditableRow(nextLineNumber);
                                         tbody.appendChild(newRow);
+                                        applyRowInputConstraints(newRow);
+                                        refreshRunningTotals();
                                 });
                         }
 
@@ -850,10 +924,11 @@
                                         line_no: index + 1,
                                         item_code: (row.querySelector('.line-item-code')?.value || '').trim(),
                                         description: (row.querySelector('.line-description')?.value || '').trim(),
-                                        quantity: toNumber(row.querySelector('.line-quantity')?.value || 0),
+                                        quantity: Math.max(0, Math.round(toNumber(row.querySelector('.line-quantity')?.value || 0))),
                                         unit: (row.querySelector('.line-unit')?.value || '').trim(),
-                                        unit_price: toNumber(row.querySelector('.line-unit-price')?.value || 0),
+                                        unit_price: roundCurrency(toNumber(row.querySelector('.line-unit-price')?.value || 0)),
                                         discount_percent: toNumber(row.querySelector('.line-discount')?.value || 0),
+                                        net_price: roundCurrency(toNumber(row.querySelector('.line-net-price')?.value || 0)),
                                         is_vatable: row.querySelector('.line-vatable')?.checked !== false,
                                 }));
                         }
@@ -861,8 +936,6 @@
                         async function saveLines() {
                                 clearAlert();
                                 const lines = collectLines();
-                                // Make sure the latest net prices are stored before sending to the server.
-                                poLineTable.querySelectorAll('tbody tr').forEach(recalculateRow);
                                 refreshRunningTotals();
 
                                 const vatPercent = toNumber(vatPercentInput ? vatPercentInput.value : 0);
