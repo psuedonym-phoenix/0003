@@ -82,3 +82,4 @@ l view.
 - 2026-07-25: Added delete actions to standard purchase order lines, defaulted new lines to "each" UOM, and aligned UOM header/content positions.
 - 2025-12-09: Prevented blank purchase order lines from being sent or saved, enforced line validation, and clarified the save error shown when no usable lines exist.
 - 2026-07-26: Surface API error details when saving purchase order lines so alerts show actionable diagnostics.
+- 2026-07-27: Saving the purchase order header now also triggers line saves so both updates happen together from the header button.
