@@ -398,13 +398,14 @@
                                                         <th scope="col" class="column-item-code">Item Code</th>
                                                         <th scope="col" class="column-description">Description</th>
                                                         <th scope="col" class="text-center column-quantity">QTY</th>
-                                                        <th scope="col" class="column-unit">UOM</th>
+                                                        <th scope="col" class="text-center column-unit">UOM</th>
                                                         <th scope="col" class="text-end column-unit-price">Unit Price</th>
                                                         <th scope="col" class="text-end column-discount">Discount %</th>
                                                         <th scope="col" class="text-end column-net-price">Net Price</th>
                                                         <th scope="col" class="text-end column-running-total">Running Total</th>
                                                         <th scope="col" class="text-center column-vatable">VATable</th>
-							<?php endif; ?>
+                                                        <th scope="col" class="text-center column-actions">Actions</th>
+                                                        <?php endif; ?>
 						</tr>
 					</thead>
 					<tbody>
@@ -446,7 +447,7 @@
                                                         <td class="column-item-code"><input type="text" class="form-control form-control-sm line-item-code" value="<?php echo e($line['item_code'] ?? ''); ?>" /></td>
                                                         <td class="column-description"><input type="text" class="form-control form-control-sm line-description" value="<?php echo e($line['description'] ?? ''); ?>" /></td>
                                                         <td class="column-quantity"><input type="number" step="1" min="0" inputmode="decimal" class="form-control form-control-sm text-end line-quantity" value="<?php echo rtrim(rtrim(number_format((float) ($line['quantity'] ?? 0), 4, '.', ''), '0'), '.'); ?>" /></td>
-                                                        <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" list="unitOptionsDatalist" value="<?php echo e($line['unit'] ?? ''); ?>" autocomplete="off" /></td>
+                                                        <td class="column-unit text-start"><input type="text" class="form-control form-control-sm line-unit" list="unitOptionsDatalist" value="<?php echo e($line['unit'] ?? ''); ?>" autocomplete="off" /></td>
                                                         <td class="column-unit-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="<?php echo number_format((float) ($line['unit_price'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="<?php echo number_format((float) ($line['discount_percent'] ?? 0), 2, '.', ''); ?>" /></td>
                                                         <?php $lineNetPrice = round_currency((float) ($line['net_price'] ?? 0)); ?>
@@ -460,6 +461,9 @@
                                                                 <?php echo $lineIsVatable ? 'checked' : ''; ?>
                                                                 aria-label="VATable"
                                                                 />
+                                                        </td>
+                                                        <td class="text-center column-actions">
+                                                                <button type="button" class="btn btn-outline-danger btn-sm delete-line">Delete</button>
                                                         </td>
                                                         <?php endif; ?>
                                                 </tr>
@@ -859,6 +863,7 @@
                         }
 
                         Array.from(poLineTable.querySelectorAll('tbody tr')).forEach(applyRowInputConstraints);
+                        renumberLines();
                         refreshRunningTotals();
 
                         /**
@@ -927,15 +932,31 @@
                                         <td class="column-item-code"><input type="text" class="form-control form-control-sm line-item-code" value="" /></td>
                                         <td class="column-description"><input type="text" class="form-control form-control-sm line-description" value="" /></td>
                                         <td class="column-quantity"><input type="number" step="1" min="0" inputmode="decimal" class="form-control form-control-sm text-end line-quantity" value="0" /></td>
-                                        <td class="column-unit"><input type="text" class="form-control form-control-sm line-unit" value="" list="unitOptionsDatalist" autocomplete="off" /></td>
+                                        <td class="column-unit text-start"><input type="text" class="form-control form-control-sm line-unit" value="each" list="unitOptionsDatalist" autocomplete="off" /></td>
                                         <td class="column-unit-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-unit-price" value="0.00" /></td>
                                         <td class="column-discount"><input type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="0.00" /></td>
                                         <td class="text-end column-net-price"><input type="text" inputmode="decimal" class="form-control form-control-sm text-end line-net-price" value="0.00" /></td>
                                         <td class="text-end fw-semibold running-total-cell column-running-total">0.00</td>
                                         <td class="text-center column-vatable"><input type="checkbox" class="form-check-input position-static line-vatable" checked aria-label="VATable" /></td>
+                                        <td class="text-center column-actions"><button type="button" class="btn btn-outline-danger btn-sm delete-line">Delete</button></td>
                                 `;
 
                                 return template;
+                        }
+
+                        function renumberLines() {
+                                const rows = Array.from(poLineTable.querySelectorAll('tbody tr'));
+
+                                rows.forEach((row, index) => {
+                                        const lineNumber = index + 1;
+                                        const lineNumberCell = row.querySelector('.column-line-number');
+
+                                        if (lineNumberCell) {
+                                                lineNumberCell.textContent = String(lineNumber);
+                                        }
+
+                                        row.dataset.lineNo = String(lineNumber);
+                                });
                         }
 
                         if (addLineButton) {
@@ -949,9 +970,31 @@
                                         const newRow = buildEditableRow(nextLineNumber);
                                         tbody.appendChild(newRow);
                                         applyRowInputConstraints(newRow);
+                                        renumberLines();
                                         refreshRunningTotals();
                                 });
                         }
+
+                        poLineTable.addEventListener('click', (event) => {
+                                const target = event.target instanceof HTMLElement ? event.target : null;
+                                if (!target) {
+                                        return;
+                                }
+
+                                const deleteButton = target.closest('.delete-line');
+                                if (!deleteButton) {
+                                        return;
+                                }
+
+                                const row = deleteButton.closest('tr');
+                                if (!row) {
+                                        return;
+                                }
+
+                                row.remove();
+                                renumberLines();
+                                refreshRunningTotals();
+                        });
 
                         function collectLines() {
                                 const rows = Array.from(poLineTable.querySelectorAll('tbody tr'));

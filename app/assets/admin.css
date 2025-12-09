@@ -29,6 +29,14 @@ body {
     width: 90px;
 }
 
+#poLineTable th.column-unit {
+    text-align: center;
+}
+
+#poLineTable td.column-unit {
+    text-align: left;
+}
+
 #poLineTable .column-unit-price,
 #poLineTable .column-net-price,
 #poLineTable .column-running-total {
@@ -41,6 +49,10 @@ body {
 
 #poLineTable .column-vatable {
     width: 90px;
+}
+
+#poLineTable .column-actions {
+    width: 120px;
 }
 
 /* Resize standard line item inputs so compact fields stay narrow while descriptions have room.
