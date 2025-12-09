@@ -147,6 +147,7 @@ $supplierSuggestions = array_values(array_unique(array_map(static function ($ord
     return $order['supplier_name'] ?? '';
 }, $orders)));
 ?>
+<div class="visually-hidden" data-page-title="Purchase Orders"></div>
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
         <div>

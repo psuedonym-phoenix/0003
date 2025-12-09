@@ -249,6 +249,7 @@ if ($hasFilters) {
     $totalPages = 1;
 }
 ?>
+<div class="visually-hidden" data-page-title="Line Entry Enquiry"></div>
 <form id="lineEnquiryForm" class="mb-3">
     <input type="hidden" name="view" value="line_entry_enquiry">
     <input type="hidden" id="lineSortBy" name="sort_by" value="<?php echo e($sortBy); ?>">

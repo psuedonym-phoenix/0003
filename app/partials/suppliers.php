@@ -1,6 +1,7 @@
 <?php
 // Placeholder view for supplier management. Replace with live supplier table when available.
 ?>
+<div class="visually-hidden" data-page-title="Suppliers"></div>
 <div class="card border-0 shadow-sm">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">

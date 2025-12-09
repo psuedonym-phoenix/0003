@@ -1,6 +1,7 @@
 <?php
 // Dashboard landing content. Keep it lightweight so it can be fetched dynamically.
 ?>
+<div class="visually-hidden" data-page-title="Dashboard"></div>
 <div class="row g-3">
     <div class="col-12">
         <div class="card shadow-sm border-0">
