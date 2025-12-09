@@ -222,8 +222,8 @@
                                 <div class="col-sm-3 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['address1']); ?>" readonly>
                                 </div>
+								<label class="col-sm-1 col-form-label">Tel: </label>
 
-                                <div class="col-sm-1">Tel:</div>
                                 <div class="col-sm-3 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['telephone']); ?>" readonly>
                                 </div>
@@ -245,7 +245,8 @@
                                 <div class="col-sm-3 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['address2']); ?>" readonly>
                                 </div>
-                                <div class="col-sm-1">Fax:</div>
+                                <label class="col-sm-1 col-form-label">Fax:</label>
+								
                                 <div class="col-sm-3 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['fax']); ?>" readonly>
                                 </div>
@@ -263,8 +264,9 @@
                                 <div class="col-sm-3 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['address3']); ?>" readonly>
                                 </div>
+								<label class="col-sm-1 col-form-label">Contact:</label>
 
-                                <div class="col-sm-1">Contact Name</div>
+                                
                                 <div class="col-sm-2 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['contact_name']); ?>" readonly>
                                 </div>
@@ -282,7 +284,8 @@
                                 <div class="col-sm-3 d-flex flex-column gap-2">
                                         <input type="text" class="form-control" value="<?php echo e($supplierContact['address4']); ?>" readonly>
                                 </div>
-                                <div class="col-sm-1">Contact Email</div>
+								<label class="col-sm-1 col-form-label">Email:</label>
+                                
                                 <div class="col-sm-4 d-flex flex-column gap-2">
                                         <input type="email" class="form-control" value="<?php echo e($supplierContact['contact_email']); ?>" readonly>
                                 </div>
