@@ -102,20 +102,29 @@
 	
 	// Convert order date to an ISO value the date picker can render.
 	$orderDateValue = '';
-	if (!empty($purchaseOrder['order_date'])) {
-		$orderDateTimestamp = strtotime((string) $purchaseOrder['order_date']);
-		if ($orderDateTimestamp !== false) {
-			$orderDateValue = date('Y-m-d', $orderDateTimestamp);
-		}
-	}
-	
-	// Build query strings for navigation so AJAX links can pass parameters via data-params and fall back to href navigation.
-	$returnQuery = build_query($returnParams);
-	$returnHref = $returnQuery !== '' ? 'index.php?' . e($returnQuery) : 'index.php';
-	
-	$previousQuery = $previousPo !== null ? build_query(array_merge($sharedParams, ['po_number' => $previousPo])) : '';
-	$nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_number' => $nextPo])) : '';
+        if (!empty($purchaseOrder['order_date'])) {
+                $orderDateTimestamp = strtotime((string) $purchaseOrder['order_date']);
+                if ($orderDateTimestamp !== false) {
+                        $orderDateValue = date('Y-m-d', $orderDateTimestamp);
+                }
+        }
+
+        $pageTitleParts = ['Purchase Order ' . ($purchaseOrder['po_number'] ?? '')];
+
+        if (!empty($purchaseOrder['supplier_name'])) {
+                $pageTitleParts[] = (string) $purchaseOrder['supplier_name'];
+        }
+
+        $pageTitle = trim(implode(' - ', array_filter($pageTitleParts)));
+
+        // Build query strings for navigation so AJAX links can pass parameters via data-params and fall back to href navigation.
+        $returnQuery = build_query($returnParams);
+        $returnHref = $returnQuery !== '' ? 'index.php?' . e($returnQuery) : 'index.php';
+
+        $previousQuery = $previousPo !== null ? build_query(array_merge($sharedParams, ['po_number' => $previousPo])) : '';
+        $nextQuery = $nextPo !== null ? build_query(array_merge($sharedParams, ['po_number' => $nextPo])) : '';
 ?>
+<div class="visually-hidden" data-page-title="<?php echo e($pageTitle); ?>"></div>
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body d-flex justify-content-between align-items-start flex-wrap gap-2">
         <div>

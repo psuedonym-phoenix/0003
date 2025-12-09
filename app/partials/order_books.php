@@ -82,6 +82,7 @@ try {
 $visibleBooks = array_values(array_filter($orderBooks, fn ($book) => (int) $book['is_visible'] === 1));
 $hiddenBooks = array_values(array_filter($orderBooks, fn ($book) => (int) $book['is_visible'] === 0));
 ?>
+<div class="visually-hidden" data-page-title="Order Books"></div>
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
         <div>

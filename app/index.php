@@ -9,7 +9,7 @@ require_authentication();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EEMS Admin Dashboard</title>
+    <title>EEMS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -40,6 +40,16 @@ require_authentication();
             const contentArea = document.getElementById('contentArea');
             const navLinks = Array.from(document.querySelectorAll('[data-view]'));
 
+            // Friendly names keep the document title readable while still showing the active area.
+            const friendlyViewTitles = {
+                dashboard: 'Dashboard',
+                suppliers: 'Suppliers',
+                order_books: 'Order Books',
+                purchase_orders: 'Purchase Orders',
+                line_entry_enquiry: 'Line Entry Enquiry',
+                purchase_order_view: 'Purchase Order',
+            };
+
             function getParamsFromElement(element) {
                 const rawParams = element?.dataset?.params || '';
 
@@ -67,8 +77,30 @@ require_authentication();
                 });
             }
 
+            function getContentTitle() {
+                const titleSource = contentArea.querySelector('[data-page-title]');
+
+                if (titleSource) {
+                    const explicitTitle = titleSource.getAttribute('data-page-title') || titleSource.textContent;
+                    if (explicitTitle) {
+                        return explicitTitle.trim();
+                    }
+                }
+
+                return null;
+            }
+
+            function updateDocumentTitle(view) {
+                const contentTitle = getContentTitle();
+                const fallbackTitle = friendlyViewTitles[view] || 'Dashboard';
+                const activeTitle = contentTitle || fallbackTitle;
+
+                document.title = `EEMS - ${activeTitle}`;
+            }
+
             async function loadView(view, params = new URLSearchParams()) {
                 setActiveLink(view);
+                updateDocumentTitle(view);
 
                 // Carry through any query parameters so deep links can open with filters already applied.
                 const mergedParams = new URLSearchParams(params);
@@ -108,6 +140,8 @@ require_authentication();
                     // Keep the URL in sync so bookmarking a view reloads it with the same filters.
                     const newUrl = queryString ? `?${queryString}` : window.location.pathname;
                     window.history.replaceState(null, '', newUrl);
+
+                    updateDocumentTitle(view);
                 } catch (err) {
                     contentArea.innerHTML = '<div class="alert alert-danger" role="alert">There was a problem loading this section. Please try again.</div>';
                 }
