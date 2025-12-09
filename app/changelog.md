@@ -87,3 +87,4 @@ l view.
 - 2026-07-29: Updated purchase order line input handling so quantity spinner changes immediately recalculate line totals and refresh header exclusive/VAT/inclusive amounts.
 
 - 2025-12-09: Allowed negative unit prices to flow through purchase order line calculations so running totals include credits.
+- 2025-12-09: Preserved negative unit prices during purchase order line saves so credit lines are stored instead of reset to zero.
