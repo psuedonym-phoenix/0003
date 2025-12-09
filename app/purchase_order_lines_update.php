@@ -183,7 +183,7 @@ try {
 
     // Prepare an updated header by cloning the current row and refreshing financial amounts.
     $updatedOrder = $purchaseOrder;
-    $updatedOrder['exclusive_amount'] = $exclusiveAmount;
+    //$updatedOrder['exclusive_amount'] = $exclusiveAmount;
     $updatedOrder['subtotal'] = $exclusiveAmount;
     $updatedOrder['vat_percent'] = $vatPercent;
     $updatedOrder['vat_amount'] = $vatAmount;
