@@ -1,0 +1,320 @@
+<div class="container-fluid" data-page-title="Cost Code Enquiry">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Cost Code Enquiry</h1>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="enquiryForm" class="row g-3">
+                <!-- Cost Code Filter -->
+                <div class="col-md-2">
+                    <label for="filterCostCodeInput" class="form-label">Cost Code</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" id="filterCostCodeInput" placeholder="Code"
+                            autocomplete="off">
+                        <div id="costCodeSuggestions" class="list-group position-absolute w-100 shadow-sm"
+                            style="z-index: 1050; display: none; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    <input type="hidden" id="filterCostCodeId">
+                </div>
+
+                <!-- Description Filter -->
+                <div class="col-md-3">
+                    <label for="filterCostDescInput" class="form-label">Cost Code Description</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" id="filterCostDescInput" placeholder="Description"
+                            autocomplete="off">
+                        <div id="costDescSuggestions" class="list-group position-absolute w-100 shadow-sm"
+                            style="z-index: 1050; display: none; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- Supplier Filter -->
+                <div class="col-md-3">
+                    <label for="filterSupplier" class="form-label">Supplier</label>
+                    <input type="text" class="form-control" id="filterSupplier" list="supplierList"
+                        placeholder="Select or Type Supplier">
+                    <datalist id="supplierList"></datalist>
+                </div>
+
+                <!-- Date Range -->
+                <div class="col-md-2">
+                    <label for="filterStartDate" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="filterStartDate">
+                </div>
+                <div class="col-md-2">
+                    <label for="filterEndDate" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="filterEndDate">
+                </div>
+
+                <!-- Actions -->
+                <div class="col-12 text-end mt-3">
+                    <button type="submit" class="btn btn-primary px-4">Search</button>
+                    <button type="button" id="resetBtn" class="btn btn-secondary px-3 ms-2">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">PO Number</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Supplier</th>
+                            <th scope="col">Cost Code</th>
+                            <th scope="col">Amount</th>
+                            <th scope="col">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">Enter filters and click Search to find
+                                records.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const form = document.getElementById('enquiryForm');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Inputs
+        const costCodeInput = document.getElementById('filterCostCodeInput');
+        const costDescInput = document.getElementById('filterCostDescInput');
+        const costCodeIdInput = document.getElementById('filterCostCodeId');
+        const supplierInput = document.getElementById('filterSupplier');
+
+        // Suggestion Boxes
+        const codeSuggestionsBox = document.getElementById('costCodeSuggestions');
+        const descSuggestionsBox = document.getElementById('costDescSuggestions');
+        const supplierList = document.getElementById('supplierList');
+
+        // State for cost codes
+        let allCostCodes = [];
+
+        // --- 1. Init: Load Data ---
+
+        async function loadInitialData() {
+            // Load All Cost Codes for local fuzzy logic (assume list is manageable size < few thousands)
+            // If list is massive, we stick to server-side search, but user asked for logic between code/desc.
+            // `api_cost_codes_lookup.php` limits to 50 by default but let's try to fetch more or use search.
+            // For accurate interaction, client-side filtering of a full list is smoothest if distinct codes < 2000.
+            // If we can't load all, we do server lookups.
+            // Let's rely on server lookups to be safe, but we need dual lookups.
+
+            // Load Suppliers (Prepopulated drop down)
+            try {
+                // Fix path: ../app/... no, line_entry_... is in app/ too. 
+                // This partial is included by content.php which is in app/.
+                // JS runs relative to index.php (parent).
+                // So `app/line_entry_supplier_suggestions.php` is correct path from root.
+                // Wait, previous error was "Network Error" on `api_enquiry_cost_codes.php`.
+                // User confirmed "The other views work".
+                // `api_enquiry_cost_codes.php` is in root. File is `app/partials/enquiry.php`.
+                // URL relative to `index.php` (which is in `app/`).
+                // So to access `../api_enquiry_cost_codes.php` we need `../api_enquiry_cost_codes.php`.
+                // `line_entry_supplier_suggestions.php` is in `app/`. So just `line_entry_supplier_suggestions.php`.
+
+                const supRes = await fetch('line_entry_supplier_suggestions.php?all_suppliers=1');
+                const supJson = await supRes.json();
+                if (supJson.suggestions) {
+                    supJson.suggestions.forEach(name => {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        supplierList.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load suppliers', e);
+            }
+        }
+
+        loadInitialData();
+
+        // --- 2. Cost Code Logic ---
+
+        // Generic Fetch Helper
+        async function searchCostCodes(term) {
+            if (term.length < 1) return [];
+            try {
+                // access root api from `app/` context -> `../api_cost_codes_lookup.php`
+                const res = await fetch(`../api_cost_codes_lookup.php?term=${encodeURIComponent(term)}`);
+                const json = await res.json();
+                return json.success ? json.data : [];
+            } catch (e) {
+                console.error(e);
+                return [];
+            }
+        }
+
+        // Input: Cost Code
+        costCodeInput.addEventListener('input', async function () {
+            const val = this.value.trim();
+            costCodeIdInput.value = ''; // Reset ID on edit
+
+            if (val.length < 1) {
+                codeSuggestionsBox.style.display = 'none';
+                return;
+            }
+
+            const matches = await searchCostCodes(val); // Server search
+
+            // Filter out if user typed description in code box? No, server handles that.
+            // Render
+            if (matches.length > 0) {
+                codeSuggestionsBox.innerHTML = '';
+                matches.forEach(item => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action py-1';
+                    a.innerHTML = `<small class="fw-bold">${item.cost_code}</small> <small class="text-muted">- ${item.description || ''}</small>`;
+                    a.onclick = (e) => {
+                        e.preventDefault();
+                        selectCostCode(item);
+                    };
+                    codeSuggestionsBox.appendChild(a);
+                });
+                codeSuggestionsBox.style.display = 'block';
+            } else {
+                codeSuggestionsBox.style.display = 'none';
+            }
+        });
+
+        // Input: Description
+        costDescInput.addEventListener('input', async function () {
+            const val = this.value.trim();
+            // Don't clear code ID yet, user might be refining? 
+            // Actually if they change description, the old code ID is likely invalid.
+            costCodeIdInput.value = '';
+            // But we won't clear the Code Input just yet, maybe they are just fixing a typo.
+
+            if (val.length < 2) {
+                descSuggestionsBox.style.display = 'none';
+                return;
+            }
+
+            const matches = await searchCostCodes(val);
+
+            if (matches.length > 0) {
+                descSuggestionsBox.innerHTML = '';
+                matches.forEach(item => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action py-1';
+                    // Highlight description
+                    a.innerHTML = `<small>${item.description || '(No Desc)'}</small> <small class="text-muted">(${item.cost_code})</small>`;
+                    a.onclick = (e) => {
+                        e.preventDefault();
+                        selectCostCode(item);
+                    };
+                    descSuggestionsBox.appendChild(a);
+                });
+                descSuggestionsBox.style.display = 'block';
+            } else {
+                descSuggestionsBox.style.display = 'none';
+            }
+        });
+
+        function selectCostCode(item) {
+            costCodeInput.value = item.cost_code;
+            costDescInput.value = item.description || '';
+            costCodeIdInput.value = item.id;
+
+            codeSuggestionsBox.style.display = 'none';
+            descSuggestionsBox.style.display = 'none';
+        }
+
+        // Close suggestions on click outside
+        document.addEventListener('click', function (e) {
+            if (!costCodeInput.contains(e.target) && !codeSuggestionsBox.contains(e.target)) {
+                codeSuggestionsBox.style.display = 'none';
+            }
+            if (!costDescInput.contains(e.target) && !descSuggestionsBox.contains(e.target)) {
+                descSuggestionsBox.style.display = 'none';
+            }
+        });
+
+        // --- 3. Search Action ---
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            resultsBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Searching...</td></tr>';
+
+            const payload = new URLSearchParams();
+            const ccId = costCodeIdInput.value;
+            // If no ID but text exists, send the text for fuzzy/legacy matching if API supports it
+            const ccDesc = costDescInput.value;
+
+            if (ccId) {
+                payload.append('cost_code_id', ccId);
+            } else if (ccDesc) {
+                payload.append('cost_code_description', ccDesc);
+            }
+
+            if (supplierInput.value) payload.append('supplier_name', supplierInput.value);
+            if (document.getElementById('filterStartDate').value) payload.append('start_date', document.getElementById('filterStartDate').value);
+            if (document.getElementById('filterEndDate').value) payload.append('end_date', document.getElementById('filterEndDate').value);
+
+            try {
+                // FIX PATH: ../api_enquiry_cost_codes.php
+                const res = await fetch(`../api_enquiry_cost_codes.php?${payload.toString()}`);
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const json = await res.json();
+
+                if (json.success) {
+                    if (!json.data || json.data.length === 0) {
+                        resultsBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No results found.</td></tr>';
+                        return;
+                    }
+
+                    resultsBody.innerHTML = '';
+                    json.data.forEach(row => {
+                        const fmtMoney = (amount) => {
+                            return new Intl.NumberFormat('en-UK', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+                        };
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                        <td>${row.po_number || ''}</td>
+                        <td>${row.order_date || ''}</td>
+                        <td>${row.supplier_name || ''}</td>
+                        <td>
+                            <small class="d-block fw-bold">${row.cost_code || ''}</small>
+                            <small class="text-muted">${row.cost_code_description || ''}</small>
+                        </td>
+                        <td>${fmtMoney(row.total_amount)}</td>
+                        <td>${row.description || ''}</td> 
+                    `;
+                        resultsBody.appendChild(tr);
+                    });
+
+                } else {
+                    resultsBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error: ${json.error || 'Unknown error'}</td></tr>`;
+                }
+
+            } catch (err) {
+                console.error(err);
+                resultsBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Network Error (Check Console)</td></tr>`;
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            form.reset();
+            costCodeIdInput.value = '';
+            resultsBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Enter filters and click Search to find records.</td></tr>';
+        });
+
+    })();
+</script>
