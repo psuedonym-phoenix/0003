@@ -92,14 +92,14 @@
         const costDescInput = document.getElementById('filterCostDescInput');
         const costCodeIdInput = document.getElementById('filterCostCodeId');
         const supplierInput = document.getElementById('filterSupplier');
+        const resultsBody = document.getElementById('resultsBody');
 
         // Suggestion Boxes
         const codeSuggestionsBox = document.getElementById('costCodeSuggestions');
         const descSuggestionsBox = document.getElementById('costDescSuggestions');
         const supplierList = document.getElementById('supplierList');
 
-        // State for cost codes
-        let allCostCodes = [];
+        let selectedCostCode = null;
 
         // --- 1. Init: Load Data ---
 
@@ -112,21 +112,28 @@
             // Let's rely on server lookups to be safe, but we need dual lookups.
 
             // Load Suppliers (Prepopulated drop down)
-            try {
-                // Fix path: ../app/... no, line_entry_... is in app/ too. 
-                // This partial is included by content.php which is in app/.
-                // JS runs relative to index.php (parent).
-                // So `app/line_entry_supplier_suggestions.php` is correct path from root.
-                // Wait, previous error was "Network Error" on `api_enquiry_cost_codes.php`.
-                // User confirmed "The other views work".
-                // `api_enquiry_cost_codes.php` is in root. File is `app/partials/enquiry.php`.
-                // URL relative to `index.php` (which is in `app/`).
-                // So to access `../api_enquiry_cost_codes.php` we need `../api_enquiry_cost_codes.php`.
-                // `line_entry_supplier_suggestions.php` is in `app/`. So just `line_entry_supplier_suggestions.php`.
+            await loadSuppliers();
+        }
 
-                const supRes = await fetch('line_entry_supplier_suggestions.php?all_suppliers=1');
+        loadInitialData();
+
+        async function loadSuppliers(costCodeMeta = null) {
+            try {
+                const params = new URLSearchParams();
+                params.append('all_suppliers', '1');
+
+                if (costCodeMeta) {
+                    if (costCodeMeta.id) params.append('cost_code_id', costCodeMeta.id);
+                    if (costCodeMeta.cost_code) params.append('cost_code', costCodeMeta.cost_code);
+                    if (costCodeMeta.description) params.append('cost_code_description', costCodeMeta.description);
+                }
+
+                const supRes = await fetch(`line_entry_supplier_suggestions.php?${params.toString()}`);
                 const supJson = await supRes.json();
-                if (supJson.suggestions) {
+
+                supplierList.innerHTML = '';
+
+                if (Array.isArray(supJson.suggestions)) {
                     supJson.suggestions.forEach(name => {
                         const opt = document.createElement('option');
                         opt.value = name;
@@ -138,16 +145,13 @@
             }
         }
 
-        loadInitialData();
-
         // --- 2. Cost Code Logic ---
 
         // Generic Fetch Helper
         async function searchCostCodes(term) {
             if (term.length < 1) return [];
             try {
-                // access root api from `app/` context -> `../api_cost_codes_lookup.php`
-                const res = await fetch(`../api_cost_codes_lookup.php?term=${encodeURIComponent(term)}`);
+                const res = await fetch(`api_cost_codes_lookup.php?term=${encodeURIComponent(term)}`);
                 const json = await res.json();
                 return json.success ? json.data : [];
             } catch (e) {
@@ -160,9 +164,11 @@
         costCodeInput.addEventListener('input', async function () {
             const val = this.value.trim();
             costCodeIdInput.value = ''; // Reset ID on edit
+            selectedCostCode = null;
 
             if (val.length < 1) {
                 codeSuggestionsBox.style.display = 'none';
+                await loadSuppliers();
                 return;
             }
 
@@ -192,13 +198,15 @@
         // Input: Description
         costDescInput.addEventListener('input', async function () {
             const val = this.value.trim();
-            // Don't clear code ID yet, user might be refining? 
+            // Don't clear code ID yet, user might be refining?
             // Actually if they change description, the old code ID is likely invalid.
             costCodeIdInput.value = '';
+            selectedCostCode = null;
             // But we won't clear the Code Input just yet, maybe they are just fixing a typo.
 
             if (val.length < 2) {
                 descSuggestionsBox.style.display = 'none';
+                await loadSuppliers();
                 return;
             }
 
@@ -224,10 +232,13 @@
             }
         });
 
-        function selectCostCode(item) {
+        async function selectCostCode(item) {
             costCodeInput.value = item.cost_code;
             costDescInput.value = item.description || '';
             costCodeIdInput.value = item.id;
+            selectedCostCode = item;
+            supplierInput.value = '';
+            await loadSuppliers(item);
 
             codeSuggestionsBox.style.display = 'none';
             descSuggestionsBox.style.display = 'none';
@@ -252,22 +263,23 @@
 
             const payload = new URLSearchParams();
             const ccId = costCodeIdInput.value;
+            const ccCode = costCodeInput.value.trim();
             // If no ID but text exists, send the text for fuzzy/legacy matching if API supports it
             const ccDesc = costDescInput.value;
 
             if (ccId) {
                 payload.append('cost_code_id', ccId);
-            } else if (ccDesc) {
-                payload.append('cost_code_description', ccDesc);
+            } else {
+                if (ccDesc) payload.append('cost_code_description', ccDesc);
+                if (ccCode) payload.append('cost_code', ccCode);
             }
 
-            if (supplierInput.value) payload.append('supplier_name', supplierInput.value);
+            if (supplierInput.value.trim()) payload.append('supplier_name', supplierInput.value.trim());
             if (document.getElementById('filterStartDate').value) payload.append('start_date', document.getElementById('filterStartDate').value);
             if (document.getElementById('filterEndDate').value) payload.append('end_date', document.getElementById('filterEndDate').value);
 
             try {
-                // FIX PATH: ../api_enquiry_cost_codes.php
-                const res = await fetch(`../api_enquiry_cost_codes.php?${payload.toString()}`);
+                const res = await fetch(`api_enquiry_cost_codes.php?${payload.toString()}`);
 
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -313,6 +325,8 @@
         resetBtn.addEventListener('click', () => {
             form.reset();
             costCodeIdInput.value = '';
+            selectedCostCode = null;
+            loadSuppliers();
             resultsBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Enter filters and click Search to find records.</td></tr>';
         });
 
