@@ -15,10 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $description = trim($_GET['description'] ?? '');
 $orderBook = trim($_GET['order_book'] ?? '');
 $poNumber = trim($_GET['po_number'] ?? '');
+$costCodeId = isset($_GET['cost_code_id']) ? (int) $_GET['cost_code_id'] : 0;
+$costCode = trim($_GET['cost_code'] ?? '');
+$costCodeDescription = trim($_GET['cost_code_description'] ?? '');
 $loadAllSuppliers = isset($_GET['all_suppliers']) && $_GET['all_suppliers'] === '1';
 
 $hasMeaningfulDescription = mb_strlen($description) >= 2;
-$hasFilters = $hasMeaningfulDescription || $orderBook !== '' || $poNumber !== '';
+$hasCostCodeFilter = $costCodeId > 0 || $costCode !== '' || $costCodeDescription !== '';
+$hasFilters = $hasMeaningfulDescription || $orderBook !== '' || $poNumber !== '' || $hasCostCodeFilter;
 
 try {
     $pdo = get_db_connection();
@@ -46,15 +50,19 @@ try {
     }
 
     // Avoid expensive scans unless the user has provided a meaningful description fragment.
-    if (!$hasMeaningfulDescription) {
+    // An explicit cost code filter counts as a meaningful filter even if the description box is empty.
+    if (!$hasMeaningfulDescription && !$hasCostCodeFilter && $orderBook === '' && $poNumber === '') {
         echo json_encode(['suggestions' => []]);
         exit;
     }
 
-    $conditions = ['pol.description LIKE :description'];
-    $params = [
-        ':description' => '%' . $description . '%',
-    ];
+    $conditions = [];
+    $params = [];
+
+    if ($hasMeaningfulDescription) {
+        $conditions[] = 'pol.description LIKE :description';
+        $params[':description'] = '%' . $description . '%';
+    }
 
     if ($orderBook !== '') {
         $conditions[] = 'po.order_book = :orderBook';
@@ -66,13 +74,35 @@ try {
         $params[':poNumber'] = '%' . $poNumber . '%';
     }
 
+    if ($costCodeId > 0) {
+        $conditions[] = 'po.cost_code_id = :costCodeId';
+        $params[':costCodeId'] = $costCodeId;
+    } elseif ($costCode !== '') {
+        $conditions[] = 'po.cost_code LIKE :costCode';
+        $params[':costCode'] = '%' . $costCode . '%';
+    } elseif ($costCodeDescription !== '') {
+        $conditions[] = 'po.cost_code_description LIKE :costCodeDescription';
+        $params[':costCodeDescription'] = '%' . $costCodeDescription . '%';
+    }
+
+    if (count($conditions) === 0) {
+        echo json_encode(['suggestions' => []]);
+        exit;
+    }
+
     $latestPerPoSubquery = 'SELECT po_number, MAX(id) AS latest_id FROM purchase_orders GROUP BY po_number';
 
     $sql = '
         SELECT DISTINCT po.supplier_name
-        FROM purchase_order_lines pol
-        INNER JOIN purchase_orders po ON po.id = pol.purchase_order_id
+        FROM purchase_orders po
         INNER JOIN (' . $latestPerPoSubquery . ') latest ON latest.po_number = po.po_number AND latest.latest_id = po.id
+    ';
+
+    if ($hasMeaningfulDescription) {
+        $sql .= ' INNER JOIN purchase_order_lines pol ON po.id = pol.purchase_order_id';
+    }
+
+    $sql .= '
         WHERE ' . implode(' AND ', $conditions) . '
           AND po.supplier_name IS NOT NULL
           AND po.supplier_name != ""
