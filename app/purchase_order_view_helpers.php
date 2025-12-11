@@ -53,7 +53,7 @@ function fetch_purchase_order_view(array $input): array
     $returnPage = max(1, (int) ($input['page'] ?? 1));
     $originView = $input['origin_view'] ?? 'purchase_orders';
 
-    if (!in_array($originView, ['purchase_orders', 'line_entry_enquiry'], true)) {
+    if (!in_array($originView, ['purchase_orders', 'line_entry_enquiry', 'enquiry_cost_codes'], true)) {
         $originView = 'purchase_orders';
     }
 
@@ -193,6 +193,27 @@ function fetch_purchase_order_view(array $input): array
         ];
 
         foreach ($lineReturnKeys as $key) {
+            $value = trim((string) ($input[$key] ?? ''));
+
+            if ($value === '') {
+                continue;
+            }
+
+            $sharedParams[$key] = $value;
+        }
+    } elseif ($originView === 'enquiry_cost_codes') {
+        $costCodeReturnKeys = [
+            'cost_code_id',
+            'cost_code',
+            'cost_code_description',
+            'supplier_name',
+            'start_date',
+            'end_date',
+            'sort_by',
+            'sort_dir',
+        ];
+
+        foreach ($costCodeReturnKeys as $key) {
             $value = trim((string) ($input[$key] ?? ''));
 
             if ($value === '') {

@@ -1,3 +1,24 @@
+<style>
+    /* Make the description easier to read on wide tables */
+    .cost-enquiry-description {
+        min-width: 280px;
+        width: 40%;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+
+    .sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .sort-indicator {
+        width: 1rem;
+        display: inline-block;
+        text-align: center;
+    }
+</style>
+
 <div class="container-fluid" data-page-title="Cost Code Enquiry">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4 mb-0">Cost Code Enquiry</h1>
@@ -62,17 +83,30 @@
                 <table class="table table-hover table-striped align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col">PO Number</th>
-                            <th scope="col">Date</th>
-                            <th scope="col">Supplier</th>
-                            <th scope="col">Cost Code</th>
-                            <th scope="col">Amount</th>
-                            <th scope="col">Description</th>
+                            <th scope="col" class="sortable" data-sort-key="po_number" aria-sort="none">
+                                <span class="d-inline-flex align-items-center gap-1">PO Number <span class="sort-indicator"></span></span>
+                            </th>
+                            <th scope="col" class="sortable" data-sort-key="order_date" aria-sort="descending">
+                                <span class="d-inline-flex align-items-center gap-1">Date <span class="sort-indicator">↓</span></span>
+                            </th>
+                            <th scope="col" class="sortable" data-sort-key="supplier_name" aria-sort="none">
+                                <span class="d-inline-flex align-items-center gap-1">Supplier <span class="sort-indicator"></span></span>
+                            </th>
+                            <th scope="col" class="sortable" data-sort-key="cost_code" aria-sort="none">
+                                <span class="d-inline-flex align-items-center gap-1">Cost Code <span class="sort-indicator"></span></span>
+                            </th>
+                            <th scope="col" class="sortable text-end" data-sort-key="total_amount" aria-sort="none">
+                                <span class="d-inline-flex align-items-center gap-1 justify-content-end w-100">Amount <span class="sort-indicator"></span></span>
+                            </th>
+                            <th scope="col" class="sortable cost-enquiry-description" data-sort-key="description" aria-sort="none">
+                                <span class="d-inline-flex align-items-center gap-1">Description <span class="sort-indicator"></span></span>
+                            </th>
+                            <th scope="col" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">Enter filters and click Search to find
+                            <td colspan="7" class="text-center py-4 text-muted">Enter filters and click Search to find
                                 records.</td>
                         </tr>
                     </tbody>
@@ -93,6 +127,7 @@
         const costCodeIdInput = document.getElementById('filterCostCodeId');
         const supplierInput = document.getElementById('filterSupplier');
         const resultsBody = document.getElementById('resultsBody');
+        const sortableHeaders = Array.from(document.querySelectorAll('[data-sort-key]'));
 
         // Suggestion Boxes
         const codeSuggestionsBox = document.getElementById('costCodeSuggestions');
@@ -100,6 +135,9 @@
         const supplierList = document.getElementById('supplierList');
 
         let selectedCostCode = null;
+        let sortBy = 'order_date';
+        let sortDir = 'desc';
+        let lastSearchParams = null;
 
         // --- 1. Init: Load Data ---
 
@@ -256,16 +294,16 @@
 
         // --- 3. Search Action ---
 
-        form.addEventListener('submit', async function (e) {
-            e.preventDefault();
+        function setStatusRow(message, isError = false) {
+            const classNames = isError ? 'text-danger' : 'text-muted';
+            resultsBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 ${classNames}">${message}</td></tr>`;
+        }
 
-            resultsBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Searching...</td></tr>';
-
+        function buildSearchParams() {
             const payload = new URLSearchParams();
             const ccId = costCodeIdInput.value;
             const ccCode = costCodeInput.value.trim();
-            // If no ID but text exists, send the text for fuzzy/legacy matching if API supports it
-            const ccDesc = costDescInput.value;
+            const ccDesc = costDescInput.value.trim();
 
             if (ccId) {
                 payload.append('cost_code_id', ccId);
@@ -275,8 +313,22 @@
             }
 
             if (supplierInput.value.trim()) payload.append('supplier_name', supplierInput.value.trim());
-            if (document.getElementById('filterStartDate').value) payload.append('start_date', document.getElementById('filterStartDate').value);
-            if (document.getElementById('filterEndDate').value) payload.append('end_date', document.getElementById('filterEndDate').value);
+
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+
+            if (startDate) payload.append('start_date', startDate);
+            if (endDate) payload.append('end_date', endDate);
+
+            payload.append('sort_by', sortBy);
+            payload.append('sort_dir', sortDir);
+
+            return payload;
+        }
+
+        async function executeSearch(payload) {
+            lastSearchParams = new URLSearchParams(payload);
+            setStatusRow('Searching...');
 
             try {
                 const res = await fetch(`api_enquiry_cost_codes.php?${payload.toString()}`);
@@ -287,47 +339,106 @@
 
                 if (json.success) {
                     if (!json.data || json.data.length === 0) {
-                        resultsBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No results found.</td></tr>';
+                        setStatusRow('No results found.');
                         return;
                     }
 
                     resultsBody.innerHTML = '';
                     json.data.forEach(row => {
                         const fmtMoney = (amount) => {
-                            return new Intl.NumberFormat('en-UK', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+                            return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount || 0);
                         };
+
+                        const searchParamsForReturn = new URLSearchParams(lastSearchParams);
+                        searchParamsForReturn.set('view', 'purchase_order_view');
+                        searchParamsForReturn.set('po_number', row.po_number || '');
+                        searchParamsForReturn.set('origin_view', 'enquiry_cost_codes');
+
+                        const poLink = `index.php?${searchParamsForReturn.toString()}`;
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                        <td>${row.po_number || ''}</td>
+                        <td class="fw-semibold">${row.po_number || ''}</td>
                         <td>${row.order_date || ''}</td>
                         <td>${row.supplier_name || ''}</td>
                         <td>
                             <small class="d-block fw-bold">${row.cost_code || ''}</small>
                             <small class="text-muted">${row.cost_code_description || ''}</small>
                         </td>
-                        <td>${fmtMoney(row.total_amount)}</td>
-                        <td>${row.description || ''}</td> 
+                        <td class="text-end">${fmtMoney(row.total_amount)}</td>
+                        <td class="cost-enquiry-description">${row.description || ''}</td>
+                        <td class="text-end">
+                            <a class="btn btn-outline-primary btn-sm" href="${poLink}" data-view="purchase_order_view" data-params="${searchParamsForReturn.toString()}">View Purchase Order</a>
+                        </td>
                     `;
                         resultsBody.appendChild(tr);
                     });
 
                 } else {
-                    resultsBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error: ${json.error || 'Unknown error'}</td></tr>`;
+                    setStatusRow(`Error: ${json.error || 'Unknown error'}`, true);
                 }
 
             } catch (err) {
                 console.error(err);
-                resultsBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Network Error (Check Console)</td></tr>`;
+                setStatusRow('Network Error (Check Console)', true);
             }
+        }
+
+        function updateSortIndicators() {
+            sortableHeaders.forEach((header) => {
+                const indicator = header.querySelector('.sort-indicator');
+                const key = header.dataset.sortKey;
+
+                if (!indicator || !key) {
+                    return;
+                }
+
+                if (key === sortBy) {
+                    header.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
+                    indicator.textContent = sortDir === 'asc' ? '↑' : '↓';
+                } else {
+                    header.setAttribute('aria-sort', 'none');
+                    indicator.textContent = '';
+                }
+            });
+        }
+
+        updateSortIndicators();
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const payload = buildSearchParams();
+            await executeSearch(payload);
+        });
+
+        sortableHeaders.forEach((header) => {
+            header.addEventListener('click', () => {
+                const key = header.dataset.sortKey;
+                if (!key) return;
+
+                if (key === sortBy) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortBy = key;
+                    sortDir = 'asc';
+                }
+
+                updateSortIndicators();
+                const payload = buildSearchParams();
+                executeSearch(payload);
+            });
         });
 
         resetBtn.addEventListener('click', () => {
             form.reset();
             costCodeIdInput.value = '';
             selectedCostCode = null;
+            sortBy = 'order_date';
+            sortDir = 'desc';
+            lastSearchParams = null;
+            updateSortIndicators();
             loadSuppliers();
-            resultsBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Enter filters and click Search to find records.</td></tr>';
+            setStatusRow('Enter filters and click Search to find records.');
         });
 
     })();
