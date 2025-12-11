@@ -88,9 +88,14 @@
                 'contact_number' => get_supplier_field($supplierDetails, $purchaseOrder, ['contact_person_no', 'contact_person_number', 'Contact_Person_No']),
                 'contact_email' => get_supplier_field($supplierDetails, $purchaseOrder, ['contact_email']),
         ];
-        $returnViewLabel = ($returnParams['view'] ?? 'purchase_orders') === 'line_entry_enquiry'
-    ? 'Back to Line Entry Enquiry'
-    : 'Back to Purchase Orders';
+        $originView = $returnParams['view'] ?? 'purchase_orders';
+        if ($originView === 'line_entry_enquiry') {
+            $returnViewLabel = 'Back to Line Entry Enquiry';
+        } elseif ($originView === 'enquiry_cost_codes') {
+            $returnViewLabel = 'Back to Cost Code Enquiry';
+        } else {
+            $returnViewLabel = 'Back to Purchase Orders';
+        }
 
         // Normalise key financial amounts so the view can show consistent figures
         // regardless of whether older columns like exclusive_amount are still present.

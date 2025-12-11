@@ -22,6 +22,8 @@ $supplierId = isset($params['supplier_id']) ? (int) $params['supplier_id'] : 0;
 $supplierName = trim($params['supplier_name'] ?? '');
 $startDate = trim($params['start_date'] ?? '');
 $endDate = trim($params['end_date'] ?? '');
+$sortBy = trim($params['sort_by'] ?? 'order_date');
+$sortDirection = strtolower(trim($params['sort_dir'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
 
 $hasAnyFilter = $costCodeId > 0
     || $costCode !== ''
@@ -88,7 +90,20 @@ try {
         $bindings[':end_date'] = $endDate;
     }
 
-    $sql .= ' ORDER BY po.order_date DESC, po.id DESC LIMIT 500';
+    $sortableColumns = [
+        'po_number' => 'po.po_number',
+        'order_date' => 'po.order_date',
+        'supplier_name' => 'po.supplier_name',
+        'cost_code' => 'po.cost_code',
+        'total_amount' => 'po.total_amount',
+        'description' => 'po.reference',
+    ];
+
+    if (!array_key_exists($sortBy, $sortableColumns)) {
+        $sortBy = 'order_date';
+    }
+
+    $sql .= ' ORDER BY ' . $sortableColumns[$sortBy] . ' ' . $sortDirection . ', po.id DESC LIMIT 500';
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($bindings);

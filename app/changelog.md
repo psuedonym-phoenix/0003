@@ -91,3 +91,4 @@ l view.
 - 2026-07-30: Reused the same purchase order version when saving the header and lines together so header saves no longer create duplicate entries.
 - 2026-07-31: Enabled transactional purchase order line editing with deposit-based running totals, recalculated header VAT/total rollups, and monospaced line styling.
 - 2025-12-11: Added in-app cost code enquiry APIs, restored result rendering, and filtered supplier suggestions by the selected cost code.
+- 2025-12-11: Updated cost code enquiry results to show Rand amounts, include a wider description column with sortable headers, and provide in-page purchase order links.
